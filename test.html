@@ -1,14 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com fonts.googleapis.com fonts.gstatic.com; script-src 'self' cdn.jsdelivr.net code.jquery.com 'unsafe-inline' cdnjs.cloudflare.com fonts.googleapis.com fonts.gstatic.com">
     <link rel="stylesheet" href="chessboard/css/chessboard-1.0.0.min.css">
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="chessboard/js/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+    <title>Chess Count Quiz</title>
+    <style>
+      .correct { color: green; }
+      .incorrect { color: red; }
+    </style>
 </head>
 <body>
+    <h2>Chess Move Count Quiz</h2>
     <div id="board" style="width: 400px"></div>
+    <form id="chessCountForm">
+        <div>
+            <label for="whiteChecks">White's Checks:</label>
+            <input type="number" id="whiteChecks" name="whiteChecks" min="0" required>
+	    <span class="feedbackIcon"></span>
+        </div>
+        <div>
+            <label for="blackChecks">Black's Checks:</label>
+            <input type="number" id="blackChecks" name="blackChecks" min="0" required>
+            <span class="feedbackIcon"></span>
+        </div>
+        <div>
+            <label for="whiteCaptures">White's Captures:</label>
+            <input type="number" id="whiteCaptures" name="whiteCaptures" min="0" required>
+            <span class="feedbackIcon"></span>
+        </div>
+        <div>
+            <label for="blackCaptures">Black's Captures:</label>
+            <input type="number" id="blackCaptures" name="blackCaptures" min="0" required>
+	    <span class="feedbackIcon"></span>
+        </div>
+        <button type="submit">Analyze</button>
+    </form>
     <script src="script.js"></script>
 </body>
 </html>
