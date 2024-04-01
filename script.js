@@ -38,37 +38,45 @@ function colorToMove(fen, side) {
 }
 
 // Grab a random FEN from the FEN text file
-async function getRandomPosition() {
-    const response = await fetch('positions.fen');
-    const text = await response.text();
-    const positions = text.split('\n');
-    if (positions.length > 0) {
-        const randomIndex = Math.floor(Math.random() * positions.length);
-        return positions[randomIndex];
-    }
-    console.log("Error with positions file");
+function getRandomPosition(positions) {
+    const randomIndex = Math.floor(Math.random() * positions.length);
+    return positions[randomIndex];
 }
 
-// The main logic that depends on loaded positions
-(async () => {
-    const fen = await getRandomPosition();
-    var game = new Chess();
-    // const fen = '5rk1/pp6/3q3p/2pP2pB/2P5/4Q1P1/PP4PK/8 w - - 8 31';
-    // const fen = '8/1R6/2P1q2k/2Ppnp2/6pr/4P3/2Q1BP1P/6K1 b - - 0 37';
-    // const fen = 'rnb1k2r/ppq2ppp/4pn2/8/2B5/1N2PNP1/PP3PP1/R2QK2R b KQkq - 0 11'
+// Return array of positions in FEN format
+async function getPositions() {
+    const response = await fetch('lichess-puzzles/black_small.fen');
+    const text = await response.text();
+    const positions = text.split('\n');
+    if (positions.length <= 0) {
+	console.log("Error with positions file");
+    }
+    return positions;
+}
+
+// Return object with correct answers from given fen
+function getCorrectAnswers(fen) {
     white_to_move = colorToMove(fen, 'w');
     black_to_move = colorToMove(fen, 'b');
-
-    // Count checks and captures for white and black
     const correctAnswers = {
 	whiteChecks: countChecks(white_to_move),
 	blackChecks: countChecks(black_to_move),
 	whiteCaptures: countCaptures(white_to_move),
 	blackCaptures: countCaptures(black_to_move)
     };
-
     console.log(correctAnswers);
+    return correctAnswers;
+}
 
+// The main logic that depends on loaded positions
+(async () => {
+    var game = new Chess();
+    const positions = await getPositions();
+    const fen = getRandomPosition(positions);
+    // Example: const fen = '5rk1/pp6/3q3p/2pP2pB/2P5/4Q1P1/PP4PK/8 w - - 8 31';
+
+    // Count checks and captures for white and black
+    correctAnswers = getCorrectAnswers(fen);
     var board = Chessboard('board', {
 	position: fen
     });
@@ -97,3 +105,4 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('whiteChecks').focus();
 });
 
+//	    input.value = ''; // Clear the input
