@@ -8,38 +8,42 @@
     <script src="chessboard/js/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
     <title>Chess Count Quiz</title>
-    <style>
-      .correct { color: green; }
-      .incorrect { color: red; }
-    </style>
+    <link rel="stylesheet" href="chess-count-quiz.css">
 </head>
 <body>
     <h2>Chess Move Count Quiz</h2>
-    <div id="board" style="width: 400px"></div>
-    <form id="chessCountForm">
-        <div>
-            <label for="whiteChecks">White's Checks:</label>
-            <input type="number" id="whiteChecks" name="whiteChecks" min="0" required>
-	    <span class="feedbackIcon"></span>
-        </div>
-        <div>
-            <label for="whiteCaptures">White's Captures:</label>
-            <input type="number" id="whiteCaptures" name="whiteCaptures" min="0" required>
-            <span class="feedbackIcon"></span>
-        </div>
-        <div>
+    <div class="container">
+      <div id="board" style="width: 500px"></div>
+      <div class="info">
+	<div id="score">Score: 0</div>
+	<div id="timer">Time: 03:00</div>
+
+	<form id="chessCountForm">
+          <div>
             <label for="blackChecks">Black's Checks:</label>
             <input type="number" id="blackChecks" name="blackChecks" min="0" required>
             <span class="feedbackIcon"></span>
-        </div>
-        <div>
+          </div>
+          <div>
             <label for="blackCaptures">Black's Captures:</label>
             <input type="number" id="blackCaptures" name="blackCaptures" min="0" required>
 	    <span class="feedbackIcon"></span>
-        </div>
-        <button type="submit">Submit Counts</button>
-    </form>
-    <script src="script.js"></script>
+          </div>
+          <div>
+            <label for="whiteChecks">White's Checks:</label>
+            <input type="number" id="whiteChecks" name="whiteChecks" min="0" required>
+	    <span class="feedbackIcon"></span>
+          </div>
+          <div>
+            <label for="whiteCaptures">White's Captures:</label>
+            <input type="number" id="whiteCaptures" name="whiteCaptures" min="0" required>
+            <span class="feedbackIcon"></span>
+          </div>
+	  <button type="submit" id="submit">Submit Counts</button>
+	</form>
+      </div>
+    </div>
+    <script src="chess-count-quiz.js"></script>
 </body>
 </html>
 

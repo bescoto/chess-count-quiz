@@ -52,7 +52,6 @@ async function getPositions() {
 //
 // Example: const fen = '5rk1/pp6/3q3p/2pP2pB/2P5/4Q1P1/PP4PK/8 w - - 8 31';    
 function getRandomPosition(positions) {
-    console.log(positions);
     const randomIndex = Math.floor(Math.random() * positions.length);
     return positions[randomIndex];
 }
@@ -84,17 +83,52 @@ function loadNewPuzzle(board, positions, chess_data) {
         feedbackIcon.textContent = ''; // Clear the feedback icon
         feedbackIcon.className = ''; // Reset the class
     });
+    document.getElementById('blackChecks').focus();
 }
 
-// The main logic that depends on loaded positions
-(async () => {
-    var board = Chessboard('board', 'start')
-    const positions = await getPositions();
-    const chess_data = { fen: null, correct: null };
-    loadNewPuzzle(board, positions, chess_data);
+// Update the display based on the internal timer
+function updateTimerDisplay(chess_data) {
+    const minutes = Math.floor(chess_data.timeRemaining / 60);
+    const seconds = chess_data.timeRemaining % 60;
+    document.getElementById('timer').textContent = `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+// Update the score based on the internal timer
+function incrementScore(chess_data) {
+    chess_data.score++;
+    document.getElementById('score').textContent = `Score: ${chess_data.score}`;
+}
+
+// Start the timer and decrement by 1 every second
+function startTimer(chess_data) {
+    timerInterval = setInterval(() => {
+        chess_data.timeRemaining = Math.max(0, chess_data.timeRemaining - 1);
+	updateTimerDisplay(chess_data);
+
+        if (chess_data.timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            endGame(chess_data);
+        }
+    }, 1000);
+}
+
+// Deduct 10 seconds for incorrect answer
+function penalizeTime(chess_data) {
+    chess_data.timeRemaining = Math.max(0, chess_data.timeRemaining - 10); // lose 10 seconds per wrong answer
+    updateTimerDisplay(chess_data);
+}
     
-    // Do this when the user submits answers
-    document.getElementById('chessCountForm').addEventListener('submit', function(event) {
+
+// This gets called when the game timer runs out
+function endGame(chess_data) {
+    document.getElementById('submit').disabled = true; // Assuming your button has an ID of 'submit'
+    alert(`Time's up! Final Score: ${chess_data.score}`);
+}
+
+// Return the event handler that is called when the user clicks to
+// submits their answers
+function submitAnswers(board, positions, chess_data) {
+    return (function (event) {
 	event.preventDefault(); // Prevent the default form submission behavior
 
 	let allCorrect = true; // Flag to track if all answers are correct
@@ -109,18 +143,30 @@ function loadNewPuzzle(board, positions, chess_data) {
             feedbackIcon.textContent = isCorrect ? '✓' : '✗'; // Set the icon
             feedbackIcon.className = isCorrect ? 'correct' : 'incorrect'; // Set the class for styling
 
-	    allCorrect = allCorrect && isCorrect; 
+	    allCorrect = allCorrect && isCorrect;
+	    if (!isCorrect) {
+		penalizeTime(chess_data)
+	    }
 	});
 
 	if (allCorrect) {
+	    incrementScore(chess_data);
 	    loadNewPuzzle(board, positions, chess_data);
 	}
     });
+}
+
+// The main logic that depends on loaded positions
+(async () => {
+    var board = Chessboard('board', 'start')
+    board.flip();
+    const positions = await getPositions();
+    const chess_data = { fen: null, correct: null, timeRemaining: 180, score: 0 };
+    loadNewPuzzle(board, positions, chess_data);
+    startTimer(chess_data);
+    
+    document.getElementById('chessCountForm').addEventListener(
+	'submit', submitAnswers(board, positions, chess_data));
 })();
 
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('whiteChecks').focus();
-});
-
-//	    input.value = ''; // Clear the input
