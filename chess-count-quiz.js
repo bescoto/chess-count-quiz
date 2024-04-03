@@ -74,6 +74,8 @@ function loadNewPuzzle(board, positions, chess_data) {
     chess_data.fen = getRandomPosition(positions);
     board.position(chess_data.fen);
     chess_data.correct = getCorrectAnswers(chess_data.fen);
+    chess_data.is_correct = { whiteChecks: false, whiteCaptures: false,
+			      blackChecks: false, blackCaptures: false };
 
     console.log(chess_data);
     
@@ -123,6 +125,7 @@ function penalizeTime(chess_data) {
 function endGame(chess_data) {
     document.getElementById('submit').disabled = true; // Assuming your button has an ID of 'submit'
     alert(`Time's up! Final Score: ${chess_data.score}`);
+    location.reload();
 }
 
 // Return the event handler that is called when the user clicks to
@@ -143,14 +146,19 @@ function submitAnswers(board, positions, chess_data) {
             feedbackIcon.textContent = isCorrect ? '✓' : '✗'; // Set the icon
             feedbackIcon.className = isCorrect ? 'correct' : 'incorrect'; // Set the class for styling
 
+	    if (!chess_data.is_correct[id] && isCorrect) {
+		chess_data.is_correct[id] = true;
+		incrementScore(chess_data);
+	    }
+	    		
 	    allCorrect = allCorrect && isCorrect;
 	    if (!isCorrect) {
 		penalizeTime(chess_data)
 	    }
 	});
 
-	if (allCorrect) {
-	    incrementScore(chess_data);
+	if (chess_data.is_correct.whiteChecks && chess_data.is_correct.whiteCaptures
+	    && chess_data.is_correct.blackChecks && chess_data.is_correct.blackCaptures) {
 	    loadNewPuzzle(board, positions, chess_data);
 	}
     });
@@ -161,7 +169,13 @@ function submitAnswers(board, positions, chess_data) {
     var board = Chessboard('board', 'start')
     board.flip();
     const positions = await getPositions();
-    const chess_data = { fen: null, correct: null, timeRemaining: 180, score: 0 };
+    const chess_data = {
+	fen: null,
+	correct: null,
+	timeRemaining: 180,
+	score: 0,
+	is_correct: null
+    };
     loadNewPuzzle(board, positions, chess_data);
     startTimer(chess_data);
     
