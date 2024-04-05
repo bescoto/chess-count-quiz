@@ -79,9 +79,10 @@ function loadNewPuzzle(board, positions, chess_data) {
 
     console.log(chess_data);
     
-    document.querySelectorAll('#chessCountForm input[type="number"]').forEach(input => {
-        input.value = ''; // Clear the input
-        const feedbackIcon = input.nextElementSibling;
+    ['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
+	const input = document.getElementById(id);
+        input.value = 0;
+        const feedbackIcon = document.getElementById(id + "FeedbackIcon");
         feedbackIcon.textContent = ''; // Clear the feedback icon
         feedbackIcon.className = ''; // Reset the class
     });
@@ -141,7 +142,7 @@ function submitAnswers(board, positions, chess_data) {
 	    const input = document.getElementById(id);
             const inputValue = parseInt(input.value, 10);
             const isCorrect = inputValue === chess_data.correct[id];
-            const feedbackIcon = input.nextElementSibling; // Assumes the span for the icon is right after the input
+            const feedbackIcon = document.getElementById(id+"FeedbackIcon");
 	    
             feedbackIcon.textContent = isCorrect ? '✓' : '✗'; // Set the icon
             feedbackIcon.className = isCorrect ? 'correct' : 'incorrect'; // Set the class for styling
@@ -184,3 +185,18 @@ function submitAnswers(board, positions, chess_data) {
 })();
 
 
+document.querySelectorAll('.increment').forEach(button => {
+    button.addEventListener('click', function() {
+        const input = this.previousElementSibling; // Assumes the input field is immediately before the increment button
+        input.value = parseInt(input.value, 10) + 1;
+    });
+});
+
+document.querySelectorAll('.decrement').forEach(button => {
+    button.addEventListener('click', function() {
+        const input = this.nextElementSibling; // Assumes the input field is immediately after the decrement button
+        if (parseInt(input.value, 10) > 0) { // Prevents negative numbers
+            input.value = parseInt(input.value, 10) - 1;
+        }
+    });
+});

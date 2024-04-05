@@ -21,25 +21,33 @@
 	<p>10 second penalty per wrong answer</p>
 
 	<form id="chessCountForm">
-          <div>
-            <label for="blackChecks">Black's Checks:</label>
-            <input type="number" id="blackChecks" name="blackChecks" min="0" required>
-            <span class="feedbackIcon"></span>
+	  <div class="input-group">
+	    <label for="blackChecks">Black's Checks:</label>
+	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
+	    <input type="number" id="blackChecks" name="blackChecks" min="0" required>
+	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
+	    <span class="feedbackIcon" id="blackChecksFeedbackIcon"></span>
           </div>
-          <div>
+          <div class="input-group">
             <label for="blackCaptures">Black's Captures:</label>
+	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
             <input type="number" id="blackCaptures" name="blackCaptures" min="0" required>
-	    <span class="feedbackIcon"></span>
+	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
+	    <span class="feedbackIcon" id="blackCapturesFeedbackIcon"></span>
           </div>
-          <div>
+          <div class="input-group">
             <label for="whiteChecks">White's Checks:</label>
+	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
             <input type="number" id="whiteChecks" name="whiteChecks" min="0" required>
-	    <span class="feedbackIcon"></span>
+	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
+	    <span class="feedbackIcon" id="whiteChecksFeedbackIcon"></span>
           </div>
-          <div>
+          <div class="input-group">
             <label for="whiteCaptures">White's Captures:</label>
+	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
             <input type="number" id="whiteCaptures" name="whiteCaptures" min="0" required>
-            <span class="feedbackIcon"></span>
+	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
+            <span class="feedbackIcon" id="whiteCapturesFeedbackIcon"></span>
           </div>
 	  <button type="submit" id="submit">Submit Counts</button>
 	</form>

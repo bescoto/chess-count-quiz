@@ -23,13 +23,46 @@ form#chessCountForm > div {
     margin-bottom: 10px; /* Adds margin to the bottom of each form group */
 }
 
-form#chessCountForm label {
+form#chessCountForm label { 
     display: block; /* Makes labels take their own line for better readability */
 }
 
 form#chessCountForm input[type="number"] {
-    width: 60px; /* Sets a fixed width for input fields */
+    width: 30px; /* Sets a fixed width for input fields */
+}
+
+.input-group {
+    display: flex;
+    gap: 8px; /* Adjusts the space between elements */
 }
 
 .correct { color: green; }
 .incorrect { color: red; }
+
+.increment, .decrement {
+    background-color: #f0f0f0;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+/* Since we already have increment/decrement arrows, remove the smaller ones from the input */
+/* For Webkit browsers like Chrome, Safari */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* For Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* For IE10+ */
+input[type="number"]::-ms-clear,
+input[type="number"]::-ms-reveal {
+    display: none;
+}
+
+
