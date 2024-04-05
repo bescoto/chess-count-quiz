@@ -43,6 +43,7 @@ form#chessCountForm input[type="number"] {
     background-color: #f0f0f0;
     border: none;
     padding: 5px 10px;
+    font-size: 24px;
     cursor: pointer;
 }
 

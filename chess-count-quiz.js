@@ -86,7 +86,9 @@ function loadNewPuzzle(board, positions, chess_data) {
         feedbackIcon.textContent = ''; // Clear the feedback icon
         feedbackIcon.className = ''; // Reset the class
     });
-    document.getElementById('blackChecks').focus();
+    if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
+	document.getElementById('blackChecks').focus();
+    }
 }
 
 // Update the display based on the internal timer
