@@ -1,3 +1,6 @@
+// -----------------------------------------------------------
+// Chess functions
+
 // Return the number of possible checking moves
 function countChecks(game) {
     let checks = 0;
@@ -69,27 +72,8 @@ function getCorrectAnswers(fen) {
     return correctAnswers;
 }
 
-// Load a new puzzle and reset inputs
-function loadNewPuzzle(board, positions, chess_data) {
-    chess_data.fen = getRandomPosition(positions);
-    board.position(chess_data.fen);
-    chess_data.correct = getCorrectAnswers(chess_data.fen);
-    chess_data.is_correct = { whiteChecks: false, whiteCaptures: false,
-			      blackChecks: false, blackCaptures: false };
-
-    console.log(chess_data);
-    
-    ['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
-	const input = document.getElementById(id);
-        input.value = 0;
-        const feedbackIcon = document.getElementById(id + "FeedbackIcon");
-        feedbackIcon.textContent = ''; // Clear the feedback icon
-        feedbackIcon.className = ''; // Reset the class
-    });
-    if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
-	document.getElementById('blackChecks').focus();
-    }
-}
+// -----------------------------------------------------------
+// Timer and score code
 
 // Update the display based on the internal timer
 function updateTimerDisplay(chess_data) {
@@ -129,6 +113,52 @@ function endGame(chess_data) {
     document.getElementById('submit').disabled = true; // Assuming your button has an ID of 'submit'
     alert(`Time's up! Final Score: ${chess_data.score}`);
     location.reload();
+}
+
+
+// ----------------------------------------------------------
+// User input code
+
+document.querySelectorAll('.increment').forEach(button => {
+    button.addEventListener('click', function() {
+        const input = this.previousElementSibling; // Assumes the input field is immediately before the increment button
+        input.value = parseInt(input.value, 10) + 1;
+    });
+});
+
+document.querySelectorAll('.decrement').forEach(button => {
+    button.addEventListener('click', function() {
+        const input = this.nextElementSibling; // Assumes the input field is immediately after the decrement button
+        if (parseInt(input.value, 10) > 0) { // Prevents negative numbers
+            input.value = parseInt(input.value, 10) - 1;
+        }
+    });
+});
+
+
+// -----------------------------------------------------------
+// General page code
+
+// Load a new puzzle and reset inputs
+function loadNewPuzzle(board, positions, chess_data) {
+    chess_data.fen = getRandomPosition(positions);
+    board.position(chess_data.fen);
+    chess_data.correct = getCorrectAnswers(chess_data.fen);
+    chess_data.is_correct = { whiteChecks: false, whiteCaptures: false,
+			      blackChecks: false, blackCaptures: false };
+
+    console.log(chess_data);
+    
+    ['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
+	const input = document.getElementById(id);
+        input.value = 0;
+        const feedbackIcon = document.getElementById(id + "FeedbackIcon");
+        feedbackIcon.textContent = ''; // Clear the feedback icon
+        feedbackIcon.className = ''; // Reset the class
+    });
+    if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
+	document.getElementById('blackChecks').focus();
+    }
 }
 
 // Return the event handler that is called when the user clicks to
@@ -187,18 +217,31 @@ function submitAnswers(board, positions, chess_data) {
 })();
 
 
-document.querySelectorAll('.increment').forEach(button => {
-    button.addEventListener('click', function() {
-        const input = this.previousElementSibling; // Assumes the input field is immediately before the increment button
-        input.value = parseInt(input.value, 10) + 1;
-    });
-});
+// ----------------------------------------------------------
+// Settings dialog box
 
-document.querySelectorAll('.decrement').forEach(button => {
-    button.addEventListener('click', function() {
-        const input = this.nextElementSibling; // Assumes the input field is immediately after the decrement button
-        if (parseInt(input.value, 10) > 0) { // Prevents negative numbers
-            input.value = parseInt(input.value, 10) - 1;
-        }
-    });
-});
+// Get the modal settings element
+var settings = document.getElementById("settingsModal");
+
+// When the user clicks the setting button, open the settings dialog
+document.getElementById("settingsButton").onclick = function() {
+    settings.style.display = "block";
+}
+
+// When the user clicks on the "Save Settings" button, close settings
+document.getElementsByClassName("close-button")[0].onclick = function() {
+    settigs.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the settings dialog, close it
+window.onclick = function(event) {
+    if (event.target == settings) {
+        settings.style.display = "none";
+    }
+}
+
+function saveSettings() {
+    // Save settings logic here
+    settings.style.display = "none"; // Close the settings window
+    // XXXXXX add code to reset game
+}

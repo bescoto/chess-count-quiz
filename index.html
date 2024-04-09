@@ -12,6 +12,28 @@
 </head>
 <body>
     <h2>Chess Move Count Quiz</h2>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">×</span>
+        <h2>Settings</h2>
+        <form id="settingsForm">
+          <!-- Settings options here -->
+          <div>
+            <label><input type="checkbox" id="showClock"> Show Clock</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="countChecks"> Count Checks</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="countCaptures"> Count Captures</label>
+          </div>
+          <button type="button" onclick="saveSettings()">Save Settings</button>
+        </form>
+      </div>
+    </div>
+    <button id="settingsButton">Settings</button>
+    
     <div class="container">
       <div id="board" style="width: 400px"></div>
       <div class="info">
