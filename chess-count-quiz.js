@@ -1,4 +1,10 @@
 // -----------------------------------------------------------
+// Global variables
+
+let chess_data = null; // See loadSettings for value of chess_data
+
+
+// -----------------------------------------------------------
 // Chess functions
 
 // Return the number of possible checking moves
@@ -76,43 +82,57 @@ function getCorrectAnswers(fen) {
 // Timer and score code
 
 // Update the display based on the internal timer
-function updateTimerDisplay(chess_data) {
+function updateTimerDisplay() {
     const minutes = Math.floor(chess_data.timeRemaining / 60);
     const seconds = chess_data.timeRemaining % 60;
     document.getElementById('timer').textContent = `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
 // Update the score based on the internal timer
-function incrementScore(chess_data) {
+function incrementScore() {
     chess_data.score++;
     document.getElementById('score').textContent = `Score: ${chess_data.score}`;
 }
 
-// Start the timer and decrement by 1 every second
-function startTimer(chess_data) {
+// Set the score back to 0
+function resetScore() {
+    chess_data.score = 0;
+    document.getElementById('score').textContent = `Score: ${chess_data.score}`;
+}
+
+// Start the timer count down
+function initTimer() {
     timerInterval = setInterval(() => {
         chess_data.timeRemaining = Math.max(0, chess_data.timeRemaining - 1);
 	updateTimerDisplay(chess_data);
-
+	
         if (chess_data.timeRemaining <= 0) {
-            clearInterval(timerInterval);
-            endGame(chess_data);
+	    endGame(chess_data);
         }
     }, 1000);
 }
 
+// Start the timer and decrement by 1 every second
+function startTimer() {
+    if (chess_data.showTimer) {
+	chess_data.timeRemaining = chess_data.defaultTimeRemaining;
+    } else {
+	chess_data.timeRemaining = Infinity;
+    }
+    setTimerVisibility(chess_data.showTimer);
+}
+
 // Deduct 10 seconds for incorrect answer
-function penalizeTime(chess_data) {
+function penalizeTime() {
     chess_data.timeRemaining = Math.max(0, chess_data.timeRemaining - 10); // lose 10 seconds per wrong answer
     updateTimerDisplay(chess_data);
 }
     
 
 // This gets called when the game timer runs out
-function endGame(chess_data) {
-    document.getElementById('submit').disabled = true; // Assuming your button has an ID of 'submit'
+function endGame() {
     alert(`Time's up! Final Score: ${chess_data.score}`);
-    location.reload();
+    startNewGame();
 }
 
 
@@ -140,9 +160,9 @@ document.querySelectorAll('.decrement').forEach(button => {
 // General page code
 
 // Load a new puzzle and reset inputs
-function loadNewPuzzle(board, positions, chess_data) {
-    chess_data.fen = getRandomPosition(positions);
-    board.position(chess_data.fen);
+function loadNewPuzzle() {
+    chess_data.fen = getRandomPosition(chess_data.positions);
+    chess_data.board.position(chess_data.fen);
     chess_data.correct = getCorrectAnswers(chess_data.fen);
     chess_data.is_correct = { whiteChecks: false, whiteCaptures: false,
 			      blackChecks: false, blackCaptures: false };
@@ -159,62 +179,51 @@ function loadNewPuzzle(board, positions, chess_data) {
     if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
 	document.getElementById('blackChecks').focus();
     }
+
+    // Submit form
+    document.getElementById('chessCountForm').addEventListener(
+	'submit', submitAnswers);
+}
+
+function startNewGame() {
+    resetScore();
+    loadNewPuzzle();
+    startTimer();
 }
 
 // Return the event handler that is called when the user clicks to
 // submits their answers
-function submitAnswers(board, positions, chess_data) {
-    return (function (event) {
-	event.preventDefault(); // Prevent the default form submission behavior
-
-	let allCorrect = true; // Flag to track if all answers are correct
-	['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
-	    console.log(`${id}: ${chess_data.correct[id]}`);
-	    
-	    const input = document.getElementById(id);
-            const inputValue = parseInt(input.value, 10);
-            const isCorrect = inputValue === chess_data.correct[id];
-            const feedbackIcon = document.getElementById(id+"FeedbackIcon");
-	    
-            feedbackIcon.textContent = isCorrect ? '✓' : '✗'; // Set the icon
-            feedbackIcon.className = isCorrect ? 'correct' : 'incorrect'; // Set the class for styling
-
-	    if (!chess_data.is_correct[id] && isCorrect) {
-		chess_data.is_correct[id] = true;
-		incrementScore(chess_data);
-	    }
-	    		
-	    allCorrect = allCorrect && isCorrect;
-	    if (!isCorrect) {
-		penalizeTime(chess_data)
-	    }
-	});
-
-	if (chess_data.is_correct.whiteChecks && chess_data.is_correct.whiteCaptures
-	    && chess_data.is_correct.blackChecks && chess_data.is_correct.blackCaptures) {
-	    loadNewPuzzle(board, positions, chess_data);
+function submitAnswers(event) {
+    event.preventDefault(); // Prevent the default form submission behavior
+    
+    let allCorrect = true; // Flag to track if all answers are correct
+    ['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
+	console.log(`${id}: ${chess_data.correct[id]}`);
+	
+	const input = document.getElementById(id);
+        const inputValue = parseInt(input.value, 10);
+        const isCorrect = inputValue === chess_data.correct[id];
+        const feedbackIcon = document.getElementById(id+"FeedbackIcon");
+	
+        feedbackIcon.textContent = isCorrect ? '✓' : '✗'; // Set the icon
+        feedbackIcon.className = isCorrect ? 'correct' : 'incorrect'; // Set the class for styling
+	
+	if (!chess_data.is_correct[id] && isCorrect) {
+	    chess_data.is_correct[id] = true;
+	    incrementScore(chess_data);
+	}
+	
+	allCorrect = allCorrect && isCorrect;
+	if (!isCorrect) {
+	    penalizeTime(chess_data)
 	}
     });
-}
-
-// The main logic that depends on loaded positions
-(async () => {
-    var board = Chessboard('board', 'start')
-    board.flip();
-    const positions = await getPositions();
-    const chess_data = {
-	fen: null,
-	correct: null,
-	timeRemaining: 180,
-	score: 0,
-	is_correct: null
-    };
-    loadNewPuzzle(board, positions, chess_data);
-    startTimer(chess_data);
     
-    document.getElementById('chessCountForm').addEventListener(
-	'submit', submitAnswers(board, positions, chess_data));
-})();
+    if (chess_data.is_correct.whiteChecks && chess_data.is_correct.whiteCaptures
+	&& chess_data.is_correct.blackChecks && chess_data.is_correct.blackCaptures) {
+	loadNewPuzzle();
+    }
+}
 
 
 // ----------------------------------------------------------
@@ -241,7 +250,61 @@ window.onclick = function(event) {
 }
 
 function saveSettings() {
-    // Save settings logic here
+    // Timer settings
+    const showTimer = document.getElementById('showTimer').checked;
+    chess_data.showTimer = showTimer;
+    localStorage.setItem('showTimer', showTimer); // Save preference
+    setTimerVisibility(showTimer); // Apply preference immediately
+    
     settings.style.display = "none"; // Close the settings window
-    // XXXXXX add code to reset game
+    
+    startNewGame();
 }
+
+function setTimerVisibility(visible) {
+    if (visible) {
+	document.getElementById('timerSection').style.display = 'block';
+    } else {
+	document.getElementById('timerSection').style.display = 'none';
+    }
+}
+
+// ----------------------------------------------------------
+// Load settings
+
+// Load the settings and initialize chess_data
+async function loadSettings() {
+    chess_data = {
+	showTimer: true, // whether the game should be timed
+	fen: null, // current position
+	correct: null, // stores the correct numbers of counts
+	defaultTimeRemaining: 10, // default to 3 min
+	timeRemaining: 999, // current time left on clock
+	score: 0,
+	is_correct: null, // stores which counts are correct
+	positions: null, // Array of position strings
+	board: null // The board object
+    };
+
+    // Timer
+    chess_data.showTimer = localStorage.getItem('showTimer') === 'false' ? false : true;
+    document.getElementById('showTimer').checked = chess_data.showTimer; // Set the checkbox state
+    setTimerVisibility(chess_data.showTimer);
+    initTimer();
+
+    // Board
+    chess_data.board = Chessboard('board', 'start')
+    chess_data.board.flip();
+
+    // Positions
+    chess_data.positions = await getPositions();
+}
+
+
+// -----------------------------------------------------------
+// Main logic, which depends on loaded positions
+
+(async () => {
+    await loadSettings();
+    startNewGame();
+})();

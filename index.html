@@ -20,13 +20,13 @@
         <form id="settingsForm">
           <!-- Settings options here -->
           <div>
-            <label><input type="checkbox" id="showClock"> Show Clock</label>
+            <label><input type="checkbox" id="showTimer">Enable Timer</label>
           </div>
           <div>
-            <label><input type="checkbox" id="countChecks"> Count Checks</label>
+            <label><input type="checkbox" id="countChecks">Count Checks</label>
           </div>
           <div>
-            <label><input type="checkbox" id="countCaptures"> Count Captures</label>
+            <label><input type="checkbox" id="countCaptures">Count Captures</label>
           </div>
           <button type="button" onclick="saveSettings()">Save Settings</button>
         </form>
@@ -38,10 +38,12 @@
       <div id="board" style="width: 400px"></div>
       <div class="info">
 	<div id="score">Score: 0</div>
-	<div id="timer">Time: 03:00</div>
 
-	<p>10 second penalty per wrong answer</p>
-
+	<div id="timerSection">
+	  <div id="timer">Time: 03:00</div>
+	  <p>10 second penalty per wrong answer</p>
+	</div>
+	
 	<form id="chessCountForm">
 	  <div class="input-group">
 	    <label for="blackChecks">Black's Checks:</label>
