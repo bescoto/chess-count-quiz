@@ -37,13 +37,10 @@ function countCaptures(game) {
 }
 
 // Return a game where it's the specified player to move ('w' or 'b') from the given FEN
-function colorToMove(fen, side) {
+function switchFenSides(fen, side) {
     var fenParts = fen.split(' ');
     fenParts[1] = side;
-    const modifiedFen = fenParts.join(' ');
-    var game = new Chess();
-    game.load(modifiedFen);
-    return game;
+    return fenParts.join(' ');
 }
 
 // Return array of positions in FEN format
@@ -66,16 +63,34 @@ function getRandomPosition(positions) {
 }
 
 // Return object with correct counts for black and white from given fen
-function getCorrectAnswers(fen) {
-    white_to_move = colorToMove(fen, 'w');
-    black_to_move = colorToMove(fen, 'b');
-    const correctAnswers = {
-	whiteChecks: countChecks(white_to_move),
-	whiteCaptures: countCaptures(white_to_move),
-	blackChecks: countChecks(black_to_move),
-	blackCaptures: countCaptures(black_to_move)
-    };
-    return correctAnswers;
+function getCorrectAnswers(fen, questionTypes) {
+    return questionTypes.reduce((result, quesType) => {
+	result[quesType] = getOneCorrectAnswer(fen, quesType);
+	return result;
+    }, {});
+}
+
+function getOneCorrectAnswer(fen, questionType) {
+    let modFen;
+    if (questionType.startsWith('p1')) {
+	modFen = fen;
+    } else if (questionType.startsWith('p2')) {
+	p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
+	modFen = switchFenSides(fen, p2Color)
+    } else {
+	throw new RangeError('Expected p1 or p2');
+    }
+
+    const game = new Chess();
+    game.load(modFen);
+
+    if (questionType.endsWith('Checks')) {
+	return countChecks(game);
+    } else if (questionType.endsWith('Captures')) {
+	return countCaptures(game);
+    } else {
+	throw new RangeError('Expected Checks or Captures');
+    }
 }
 
 // -----------------------------------------------------------
@@ -163,13 +178,16 @@ document.querySelectorAll('.decrement').forEach(button => {
 function loadNewPuzzle() {
     chess_data.fen = getRandomPosition(chess_data.positions);
     chess_data.board.position(chess_data.fen);
-    chess_data.correct = getCorrectAnswers(chess_data.fen);
-    chess_data.is_correct = { whiteChecks: false, whiteCaptures: false,
-			      blackChecks: false, blackCaptures: false };
+    chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
+
+    // Initialize all answers to start as false
+    chess_data.is_correct = Object.fromEntries(
+	chess_data.questionTypes.map(name => [name, false])
+    );
 
     console.log(chess_data);
     
-    ['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
+    chess_data.questionTypes.forEach((id) => {
 	const input = document.getElementById(id);
         input.value = 0;
         const feedbackIcon = document.getElementById(id + "FeedbackIcon");
@@ -177,7 +195,7 @@ function loadNewPuzzle() {
         feedbackIcon.className = ''; // Reset the class
     });
     if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
-	document.getElementById('blackChecks').focus();
+	document.getElementById('p1Checks').focus();
     }
 
     // Submit form
@@ -197,7 +215,7 @@ function submitAnswers(event) {
     event.preventDefault(); // Prevent the default form submission behavior
     
     let allCorrect = true; // Flag to track if all answers are correct
-    ['whiteChecks', 'whiteCaptures', 'blackChecks', 'blackCaptures'].forEach((id) => {
+    chess_data.questionTypes.forEach((id) => {
 	console.log(`${id}: ${chess_data.correct[id]}`);
 	
 	const input = document.getElementById(id);
@@ -219,8 +237,8 @@ function submitAnswers(event) {
 	}
     });
     
-    if (chess_data.is_correct.whiteChecks && chess_data.is_correct.whiteCaptures
-	&& chess_data.is_correct.blackChecks && chess_data.is_correct.blackCaptures) {
+    const all_correct = Object.values(chess_data.is_correct).reduce((acc, cur) => acc && cur, true);
+    if (all_correct) {
 	loadNewPuzzle();
     }
 }
@@ -283,7 +301,8 @@ async function loadSettings() {
 	score: 0,
 	is_correct: null, // stores which counts are correct
 	positions: null, // Array of position strings
-	board: null // The board object
+	board: null, // The board object
+	questionTypes: null // Array of questions, as strings, to ask the user
     };
 
     // Timer
@@ -298,6 +317,11 @@ async function loadSettings() {
 
     // Positions
     chess_data.positions = await getPositions();
+    chess_data.playerToMove = 'b';
+
+    // Questions
+    chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
+    
 }
 
 
