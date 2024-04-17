@@ -23,10 +23,16 @@
             <label><input type="checkbox" id="showTimer">Enable Timer</label>
           </div>
           <div>
-            <label><input type="checkbox" id="countChecks">Count Checks</label>
+            <label><input type="checkbox" id="enableP1Checks" name="quizOption" value="p1Checks">Count Player 1's Checks</label>
           </div>
           <div>
-            <label><input type="checkbox" id="countCaptures">Count Captures</label>
+            <label><input type="checkbox" id="enableP1Captures" name="quizOption" value="p1Captures">Count Player 1's Captures</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enableP2Checks" name="quizOption" value="p2Checks">Count Player 2's Checks</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enableP2Captures" name="quizOption" value="p2Captures">Count Player 2's Captures</label>
           </div>
           <button type="button" onclick="saveSettings()">Save Settings</button>
         </form>
@@ -45,34 +51,9 @@
 	</div>
 	
 	<form id="chessCountForm">
-	  <div class="input-group">
-	    <label for="p1Checks">Black's Checks:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-	    <input type="number" id="p1Checks" name="p1Checks" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-	    <span class="feedbackIcon" id="p1ChecksFeedbackIcon"></span>
-          </div>
-          <div class="input-group">
-            <label for="p1Captures">Black's Captures:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-            <input type="number" id="p1Captures" name="p1Captures" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-	    <span class="feedbackIcon" id="p1CapturesFeedbackIcon"></span>
-          </div>
-          <div class="input-group">
-            <label for="p2Checks">White's Checks:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-            <input type="number" id="p2Checks" name="p2Checks" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-	    <span class="feedbackIcon" id="p2ChecksFeedbackIcon"></span>
-          </div>
-          <div class="input-group">
-            <label for="p2Captures">White's Captures:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-            <input type="number" id="p2Captures" name="p2Captures" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-            <span class="feedbackIcon" id="p2CapturesFeedbackIcon"></span>
-          </div>
+	  <div id="count-inputs">
+	    <!-- Dynamic input fields will be appended here based on settings -->
+	  </div>
 	  <button type="submit" id="submit">Submit Counts</button>
 	</form>
       </div>

@@ -195,12 +195,11 @@ function loadNewPuzzle() {
         feedbackIcon.className = ''; // Reset the class
     });
     if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
-	document.getElementById('p1Checks').focus();
+	document.getElementById(chess_data.questionTypes[0]).focus();
     }
 
     // Submit form
-    document.getElementById('chessCountForm').addEventListener(
-	'submit', submitAnswers);
+    document.getElementById('chessCountForm').addEventListener('submit', submitAnswers);
 }
 
 function startNewGame() {
@@ -257,7 +256,7 @@ document.getElementById("settingsButton").onclick = function() {
 
 // When the user clicks on the "Save Settings" button, close settings
 document.getElementsByClassName("close-button")[0].onclick = function() {
-    settigs.style.display = "none";
+    settings.style.display = "none";
 }
 
 // When the user clicks anywhere outside of the settings dialog, close it
@@ -274,8 +273,14 @@ function saveSettings() {
     localStorage.setItem('showTimer', showTimer); // Save preference
     setTimerVisibility(showTimer); // Apply preference immediately
     
-    settings.style.display = "none"; // Close the settings window
+    // Which count questions are asked
+    const questionCheckboxes = document.querySelectorAll('input[name="quizOption"]:checked');
+    chess_data.questionTypes = Array.from(questionCheckboxes).map(opt => opt.value);
+    console.log(chess_data.questionTypes);
+    localStorage.setItem('questionTypes', JSON.stringify(chess_data.questionTypes)); // Save preference
+    createDynamicInputs(chess_data.questionTypes);
     
+    settings.style.display = "none"; // Close the settings window
     startNewGame();
 }
 
@@ -296,7 +301,7 @@ async function loadSettings() {
 	showTimer: true, // whether the game should be timed
 	fen: null, // current position
 	correct: null, // stores the correct numbers of counts
-	defaultTimeRemaining: 10, // default to 3 min
+	defaultTimeRemaining: 180, // default to 3 min
 	timeRemaining: 999, // current time left on clock
 	score: 0,
 	is_correct: null, // stores which counts are correct
@@ -320,10 +325,88 @@ async function loadSettings() {
     chess_data.playerToMove = 'b';
 
     // Questions
-    chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
-    
+    const storedTypes = localStorage.getItem('questionTypes');
+    if (storedTypes !== null && storedTypes != '') {
+	chess_data.questionTypes = JSON.parse(storedTypes)
+    } else {
+	chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
+    }
+    // Uncheck each input
+    document.querySelectorAll('input[name="quizOption"]').forEach(option => {
+	option.checked = false;
+    });
+    // Check the ones that are enabled
+    chess_data.questionTypes.forEach(questionType => {
+	document.querySelector(`input[value="${questionType}"]`).checked = true;
+    })
+
+    console.log(chess_data.questionTypes);
+    createDynamicInputs(chess_data.questionTypes);
 }
 
+// Set the inputs where the user specifies how many possible moves there are
+function createDynamicInputs(questionTypes) {
+    const elem = document.getElementById('count-inputs');
+    elem.innerHTML = ''; // Clear previous inputs
+
+    questionTypes.forEach(questionType => {
+	const div = document.createElement('div');
+        div.className = 'input-group';
+
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        const decrementButton = document.createElement('button');
+        const incrementButton = document.createElement('button');
+	const feedbackIcon = document.createElement('span');
+        
+        label.textContent = createDynamicInputsLabel(questionType);
+        input.type = 'number';
+        input.id = questionType;
+        input.name = questionType;
+        input.min = '0';
+        input.required = true;
+
+        decrementButton.textContent = '←';
+        decrementButton.type = 'button';
+        decrementButton.onclick = () => { if (input.value > 0) input.value--; };
+	decrementButton.className = 'decrement';
+
+        incrementButton.textContent = '→';
+        incrementButton.type = 'button';
+        incrementButton.onclick = () => { input.value++; };
+	incrementButton.className = 'increment';
+	
+        feedbackIcon.className = 'feedbackIcon';
+        feedbackIcon.id = `${questionType}FeedbackIcon`;
+	
+        div.appendChild(label);
+        div.appendChild(decrementButton);
+        div.appendChild(input);
+        div.appendChild(incrementButton);
+	div.appendChild(feedbackIcon);
+
+	elem.appendChild(div);
+    });
+}
+
+// Return the label for each input
+function createDynamicInputsLabel(questionType) {
+    const color = (questionType.startsWith('p1')
+		   ? (chess_data.playerToMove == 'b' ? "Black" : "White")
+		   : (chess_data.playerToMove == 'b' ? "White" : "Black"))
+
+    var moveType;
+    switch (questionType.slice(2)) {
+    case "Captures":
+	moveType = "Captures";
+	break;
+    case "Checks":
+	moveType = "Checks";
+	break;
+    }
+	
+    return `${color}'s ${moveType}:`;
+}
 
 // -----------------------------------------------------------
 // Main logic, which depends on loaded positions

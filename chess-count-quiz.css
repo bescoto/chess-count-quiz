@@ -18,11 +18,6 @@
     font-size: 2em;
 }
 
-/* Optional: Adds some styling to the form for better spacing and alignment */
-form#chessCountForm > div {
-    margin-bottom: 10px; /* Adds margin to the bottom of each form group */
-}
-
 form#chessCountForm label { 
     display: block; /* Makes labels take their own line for better readability */
 }
@@ -34,6 +29,7 @@ form#chessCountForm input[type="number"] {
 .input-group {
     display: flex;
     gap: 8px; /* Adjusts the space between elements */
+    margin-bottom: 10px; /* Adds margin to the bottom of each form group */
 }
 
 .correct { color: green; }
