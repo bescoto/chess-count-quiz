@@ -36,6 +36,11 @@ function countCaptures(game) {
     return capturingMoves.length;
 }
 
+// Return the total number of moves
+function countAllLegal(game) {
+    return game.moves({ verbose: true }).length;
+}
+
 // Return a game where it's the specified player to move ('w' or 'b') from the given FEN
 function switchFenSides(fen, side) {
     var fenParts = fen.split(' ');
@@ -88,6 +93,8 @@ function getOneCorrectAnswer(fen, questionType) {
 	return countChecks(game);
     } else if (questionType.endsWith('Captures')) {
 	return countCaptures(game);
+    } else if (questionType.endsWith('AllLegal')) {
+	return countAllLegal(game);
     } else {
 	throw new RangeError('Expected Checks or Captures');
     }
@@ -215,8 +222,6 @@ function submitAnswers(event) {
     
     let allCorrect = true; // Flag to track if all answers are correct
     chess_data.questionTypes.forEach((id) => {
-	console.log(`${id}: ${chess_data.correct[id]}`);
-	
 	const input = document.getElementById(id);
         const inputValue = parseInt(input.value, 10);
         const isCorrect = inputValue === chess_data.correct[id];
@@ -276,7 +281,6 @@ function saveSettings() {
     // Which count questions are asked
     const questionCheckboxes = document.querySelectorAll('input[name="quizOption"]:checked');
     chess_data.questionTypes = Array.from(questionCheckboxes).map(opt => opt.value);
-    console.log(chess_data.questionTypes);
     localStorage.setItem('questionTypes', JSON.stringify(chess_data.questionTypes)); // Save preference
     createDynamicInputs(chess_data.questionTypes);
     
@@ -402,6 +406,9 @@ function createDynamicInputsLabel(questionType) {
 	break;
     case "Checks":
 	moveType = "Checks";
+	break;
+    case "AllLegal":
+	moveType = "Moves";
 	break;
     }
 	

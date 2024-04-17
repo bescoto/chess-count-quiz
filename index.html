@@ -22,18 +22,30 @@
           <div>
             <label><input type="checkbox" id="showTimer">Enable Timer</label>
           </div>
+	  <br>
+
           <div>
-            <label><input type="checkbox" id="enableP1Checks" name="quizOption" value="p1Checks">Count Player 1's Checks</label>
+            <label><input type="checkbox" id="enableP1AllLegal" name="quizOption" value="p1AllLegal">Count all of player 1's legal moves</label>
           </div>
           <div>
-            <label><input type="checkbox" id="enableP1Captures" name="quizOption" value="p1Captures">Count Player 1's Captures</label>
+            <label><input type="checkbox" id="enableP1Checks" name="quizOption" value="p1Checks">Count Player 1's checks</label>
           </div>
           <div>
-            <label><input type="checkbox" id="enableP2Checks" name="quizOption" value="p2Checks">Count Player 2's Checks</label>
+            <label><input type="checkbox" id="enableP1Captures" name="quizOption" value="p1Captures">Count player 1's captures</label>
+          </div>
+	  <br>
+	  
+          <div>
+            <label><input type="checkbox" id="enableP2AllLegal" name="quizOption" value="p2AllLegal">Count all of player 2's legal moves</label>
           </div>
           <div>
-            <label><input type="checkbox" id="enableP2Captures" name="quizOption" value="p2Captures">Count Player 2's Captures</label>
+            <label><input type="checkbox" id="enableP2Checks" name="quizOption" value="p2Checks">Count player 2's checks</label>
           </div>
+          <div>
+            <label><input type="checkbox" id="enableP2Captures" name="quizOption" value="p2Captures">Count player 2's Captures</label>
+          </div>
+	  <br>
+	  
           <button type="button" onclick="saveSettings()">Save Settings</button>
         </form>
       </div>
