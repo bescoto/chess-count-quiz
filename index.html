@@ -12,43 +12,68 @@
 </head>
 <body>
     <h2>Chess Move Count Quiz</h2>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">×</span>
+        <h2>Settings</h2>
+        <form id="settingsForm">
+          <!-- Settings options here -->
+          <div>
+            <label><input type="checkbox" id="showTimer">Enable Timer</label>
+          </div>
+	  <br>
+
+	  <div>
+	    Player to move:
+	    <label><input type="radio" name="playerToMove" value="White">White</label>
+	    <label><input type="radio" name="playerToMove" value="Black">Black</label>
+	    <label><input type="radio" name="playerToMove" value="Random" checked>Random</label>
+	  </div>
+	  <br>
+
+	  <div>
+            <label><input type="checkbox" id="enableP1AllLegal" name="quizOption" value="p1AllLegal">Count all of player 1's legal moves</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enableP1Checks" name="quizOption" value="p1Checks">Count Player 1's checks</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enableP1Captures" name="quizOption" value="p1Captures">Count player 1's captures</label>
+          </div>
+	  <br>
+	  
+          <div>
+            <label><input type="checkbox" id="enableP2AllLegal" name="quizOption" value="p2AllLegal">Count all of player 2's legal moves</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enableP2Checks" name="quizOption" value="p2Checks">Count player 2's checks</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enableP2Captures" name="quizOption" value="p2Captures">Count player 2's Captures</label>
+          </div>
+	  <br>
+	  
+          <button type="button" onclick="saveSettings()">Save Settings</button>
+        </form>
+      </div>
+    </div>
+    <button id="settingsButton">Settings</button>
+    
     <div class="container">
       <div id="board" style="width: 400px"></div>
       <div class="info">
 	<div id="score">Score: 0</div>
-	<div id="timer">Time: 03:00</div>
 
-	<p>10 second penalty per wrong answer</p>
-
+	<div id="timerSection">
+	  <div id="timer">Time: 03:00</div>
+	  <p>10 second penalty per wrong answer</p>
+	</div>
+	
 	<form id="chessCountForm">
-	  <div class="input-group">
-	    <label for="blackChecks">Black's Checks:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-	    <input type="number" id="blackChecks" name="blackChecks" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-	    <span class="feedbackIcon" id="blackChecksFeedbackIcon"></span>
-          </div>
-          <div class="input-group">
-            <label for="blackCaptures">Black's Captures:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-            <input type="number" id="blackCaptures" name="blackCaptures" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-	    <span class="feedbackIcon" id="blackCapturesFeedbackIcon"></span>
-          </div>
-          <div class="input-group">
-            <label for="whiteChecks">White's Checks:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-            <input type="number" id="whiteChecks" name="whiteChecks" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-	    <span class="feedbackIcon" id="whiteChecksFeedbackIcon"></span>
-          </div>
-          <div class="input-group">
-            <label for="whiteCaptures">White's Captures:</label>
-	    <button type="button" class="decrement" tabindex="-1">&#8592;</button>
-            <input type="number" id="whiteCaptures" name="whiteCaptures" min="0" required>
-	    <button type="button" class="increment" tabindex="-1">&#8594;</button>
-            <span class="feedbackIcon" id="whiteCapturesFeedbackIcon"></span>
-          </div>
+	  <div id="count-inputs">
+	    <!-- Dynamic input fields will be appended here based on settings -->
+	  </div>
 	  <button type="submit" id="submit">Submit Counts</button>
 	</form>
       </div>
