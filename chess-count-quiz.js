@@ -50,7 +50,10 @@ function switchFenSides(fen, side) {
 
 // Return array of positions in FEN format
 async function getPositions() {
-    const response = await fetch('lichess-puzzles/black_small.fen');
+    const path = (chess_data.playerToMove == 'b'
+		  ? 'lichess-puzzles/black_small.fen'
+		  : 'lichess-puzzles/white_small.fen');
+    const response = await fetch(path);
     const text = await response.text();
     const positions = text.split('\n');
     if (positions.length <= 0) {
@@ -153,8 +156,9 @@ function penalizeTime() {
 
 // This gets called when the game timer runs out
 function endGame() {
-    alert(`Time's up! Final Score: ${chess_data.score}`);
-    startNewGame();
+    if (confirm(`Time's up! Final Score: ${chess_data.score}`)) {
+	startNewGame();
+    }
 }
 
 
@@ -271,12 +275,21 @@ window.onclick = function(event) {
     }
 }
 
-function saveSettings() {
+async function saveSettings() {
     // Timer settings
     const showTimer = document.getElementById('showTimer').checked;
     chess_data.showTimer = showTimer;
     localStorage.setItem('showTimer', showTimer); // Save preference
     setTimerVisibility(showTimer); // Apply preference immediately
+    
+    // Player to move
+    const selectedToMove = document.querySelector('input[name="playerToMove"]:checked');
+    localStorage.setItem('selectedToMove', selectedToMove.value); // Save preference
+    setPlayerToMove(selectedToMove.value);
+
+    // Set positions and board
+    chess_data.positions = await getPositions();
+    setBoard();
     
     // Which count questions are asked
     const questionCheckboxes = document.querySelectorAll('input[name="quizOption"]:checked');
@@ -320,14 +333,19 @@ async function loadSettings() {
     setTimerVisibility(chess_data.showTimer);
     initTimer();
 
-    // Board
-    chess_data.board = Chessboard('board', 'start')
-    chess_data.board.flip();
-
-    // Positions
+    // Positions and player to move
+    var selectedToMove = localStorage.getItem('selectedToMove');
+    if (selectedToMove === null || selectedToMove == '') {
+	selectedToMove = 'Random';
+    }
+    console.log(selectedToMove);
+    document.querySelector(`input[value="${selectedToMove}"]`).checked = true;
+    setPlayerToMove(selectedToMove);
+    
+    // Load positions
     chess_data.positions = await getPositions();
-    chess_data.playerToMove = 'b';
-
+    setBoard();
+    
     // Questions
     const storedTypes = localStorage.getItem('questionTypes');
     if (storedTypes !== null && storedTypes != '') {
@@ -346,6 +364,28 @@ async function loadSettings() {
 
     console.log(chess_data.questionTypes);
     createDynamicInputs(chess_data.questionTypes);
+}
+
+// Set the player to move
+function setPlayerToMove(selected) {
+    document.querySelector(`input[value="${selected}"]`).checked = true;
+    if (selected == 'White') {
+	chess_data.playerToMove = 'w';
+    } else if (selected == 'Black') {
+	chess_data.playerToMove = 'b';
+    } else if (Math.random() < .5) { // last two options are random with probability .5
+	chess_data.playerToMove = 'w';
+    } else {
+	chess_data.playerToMove = 'b';
+    }
+}
+
+// Initialize the board based on the player to move
+function setBoard() {
+    chess_data.board = Chessboard('board', 'start');
+    if (chess_data.playerToMove == 'b') {
+	chess_data.board.flip();
+    }
 }
 
 // Set the inputs where the user specifies how many possible moves there are
