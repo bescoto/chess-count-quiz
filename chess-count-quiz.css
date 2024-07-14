@@ -43,6 +43,24 @@ form#chessCountForm input[type="number"] {
     cursor: pointer;
 }
 
+.action-button {
+    width: 150px;
+    padding: 5px 10px;
+    font-size: 16px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.action-button:disabled {
+    background-color: #d3d3d3;
+    cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------- */
+/* Browser-specific tweaking */
+
+
 /* Since we already have increment/decrement arrows, remove the smaller ones from the input */
 /* For Webkit browsers like Chrome, Safari */
 input[type="number"]::-webkit-inner-spin-button,
