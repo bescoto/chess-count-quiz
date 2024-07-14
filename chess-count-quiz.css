@@ -4,6 +4,12 @@
     gap: 20px; /* Adds some space between the board and the form */
 }
 
+#board {
+    width: 100%; /* Make the board responsive */
+    max-width: 400px; /* Set a maximum width */
+    height: auto; /* Maintain aspect ratio */
+}
+
 .info {
     display: flex;
     flex-direction: column;
@@ -50,6 +56,7 @@ form#chessCountForm input[type="number"] {
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     cursor: pointer;
+    color: black; /* Ensure the font color is black */
 }
 
 .action-button:disabled {
