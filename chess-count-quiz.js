@@ -13,17 +13,13 @@ function countChecks(game) {
     const moves = game.moves({ verbose: true }); // Get all moves with details
 
     // Temporary game instance to make moves without affecting the original game
-    let tempGame = new Chess(game.fen());
 
-    for (let move of moves) {
-        tempGame.move(move);
-        if (tempGame.in_check()) {
-            checks++;
-        }
-        tempGame.undo(); // Undo move to try the next one
-    }
-
-    return checks;
+    var checkingMoves = moves.filter(move => {
+	let tempGame = new Chess(game.fen());
+	tempGame.move(move);
+	return tempGame.in_check();
+    });
+    return { count: checkingMoves.length, moves: checkingMoves.map(move => move.san) };
 }
 
 // Return the number of possible capturing moves
@@ -33,12 +29,13 @@ function countCaptures(game) {
     // Filter the moves to only include captures
     const capturingMoves = moves.filter(move => move.flags.includes('c') || move.flags.includes('e'));
     // Return the number of capturing moves
-    return capturingMoves.length;
+    return { count: capturingMoves.length, moves: capturingMoves.map(move => move.san) };
 }
 
 // Return the total number of moves
 function countAllLegal(game) {
-    return game.moves({ verbose: true }).length;
+    var moves = game.moves({ verbose: true });
+    return { count: moves.length, moves: moves.map(move => move.san) };
 }
 
 // Return a game where it's the specified player to move ('w' or 'b') from the given FEN
@@ -127,6 +124,7 @@ function resetScore() {
 
 // Start the timer count down
 function initTimer() {
+    updateTimerDisplay(chess_data);
     timerInterval = setInterval(() => {
         chess_data.timeRemaining = Math.max(0, chess_data.timeRemaining - 1);
 	updateTimerDisplay(chess_data);
@@ -160,6 +158,25 @@ function endGame() {
 	startNewGame();
     }
 }
+
+
+// ------------------------------------------------------------
+// Code to show the moves when the user clicks the "Show Moves button"
+
+// Function to show moves and disable the button
+function showMoves() {
+    var showMovesButton = document.getElementById("showMovesButton");
+    showMovesButton.disabled = true;
+    showMovesButton.style.backgroundColor = "#d3d3d3"; // Grey out the button
+
+    chess_data.questionTypes.forEach((id) => {
+	const shownMovesLabel = document.getElementById(id + "ShownMoves");
+	shownMovesLabel.textContent = chess_data.correct[id].moves;
+    });
+}
+
+// Add event listener to the button
+document.getElementById("showMovesButton").addEventListener("click", showMoves);
 
 
 // ----------------------------------------------------------
@@ -204,12 +221,19 @@ function loadNewPuzzle() {
         const feedbackIcon = document.getElementById(id + "FeedbackIcon");
         feedbackIcon.textContent = ''; // Clear the feedback icon
         feedbackIcon.className = ''; // Reset the class
+	const shownMovesLabel = document.getElementById(id + "ShownMoves");
+	shownMovesLabel.textContent = ''; // Clear the shown moves list
     });
+    
     if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
 	document.getElementById(chess_data.questionTypes[0]).focus();
     }
 
-    // Submit form
+    const showMovesButton = document.getElementById("showMovesButton");
+    showMovesButton.disabled = false;
+    showMovesButton.style.backgroundColor = "";    
+    
+    // Add submit form listener
     document.getElementById('chessCountForm').addEventListener('submit', submitAnswers);
 }
 
@@ -228,7 +252,7 @@ function submitAnswers(event) {
     chess_data.questionTypes.forEach((id) => {
 	const input = document.getElementById(id);
         const inputValue = parseInt(input.value, 10);
-        const isCorrect = inputValue === chess_data.correct[id];
+        const isCorrect = inputValue === chess_data.correct[id].count;
         const feedbackIcon = document.getElementById(id+"FeedbackIcon");
 	
         feedbackIcon.textContent = isCorrect ? '✓' : '✗'; // Set the icon
@@ -402,6 +426,7 @@ function createDynamicInputs(questionTypes) {
         const decrementButton = document.createElement('button');
         const incrementButton = document.createElement('button');
 	const feedbackIcon = document.createElement('span');
+	const shownMoves = document.createElement('label');
         
         label.textContent = createDynamicInputsLabel(questionType);
         input.type = 'number';
@@ -422,13 +447,17 @@ function createDynamicInputs(questionTypes) {
 	
         feedbackIcon.className = 'feedbackIcon';
         feedbackIcon.id = `${questionType}FeedbackIcon`;
+
+	shownMoves.className = 'shownMoves';
+	shownMoves.id = `${questionType}ShownMoves`;
 	
         div.appendChild(label);
         div.appendChild(decrementButton);
         div.appendChild(input);
         div.appendChild(incrementButton);
 	div.appendChild(feedbackIcon);
-
+	div.appendChild(shownMoves);
+	
 	elem.appendChild(div);
     });
 }
@@ -462,3 +491,4 @@ function createDynamicInputsLabel(questionType) {
     await loadSettings();
     startNewGame();
 })();
+
