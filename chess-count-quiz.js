@@ -364,13 +364,16 @@ function loadNewPuzzle() {
     chess_data.board.position(chess_data.fen);
     chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
 
-    // Create move pairs table
-    const movesList = chess_data.remainingMoves.slice(0, chess_data.plyAhead);
-    const isBlackToMove = chess_data.fen.split(' ')[1] === 'b';
-    
-    // Generate and display the moves table
+    // Only show moves table if plyAhead > 0
     const movesDisplay = document.getElementById('remainingMoves');
-    movesDisplay.innerHTML = createMovesTableHtml(movesList, isBlackToMove);
+    if (chess_data.plyAhead > 0) {
+        // Create move pairs table
+        const movesList = chess_data.remainingMoves.slice(0, chess_data.plyAhead);
+        const isBlackToMove = chess_data.fen.split(' ')[1] === 'b';
+        movesDisplay.innerHTML = createMovesTableHtml(movesList, isBlackToMove);
+    } else {
+        movesDisplay.innerHTML = ''; // Clear the moves display
+    }
 
     // Initialize all answers to start as false
     chess_data.is_correct = Object.fromEntries(
