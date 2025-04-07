@@ -125,3 +125,33 @@ input[type="number"]::-ms-reveal {
     text-decoration: none;
     cursor: pointer;
 }
+
+#remainingMoves {
+    font-family: monospace;
+    margin: 10px 0;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.moves-table {
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-family: monospace;
+    font-size: 1.2em;  /* Make the font bigger */
+}
+
+.moves-table th,
+.moves-table td {
+    padding: 4px 8px;
+    text-align: left;
+}
+
+.moves-table th {
+    font-weight: bold;
+}
+
+.moves-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}

@@ -2,6 +2,7 @@
 // Global variables
 
 let chess_data = null; // See loadSettings for value of chess_data
+let pgn_games = []; // Array to store loaded PGN games
 
 
 // -----------------------------------------------------------
@@ -13,12 +14,12 @@ function countChecks(game) {
     const moves = game.moves({ verbose: true }); // Get all moves with details
 
     // Temporary game instance to make moves without affecting the original game
-
     var checkingMoves = moves.filter(move => {
-	let tempGame = new Chess(game.fen());
-	tempGame.move(move);
-	return tempGame.in_check();
+	    let tempGame = new Chess(game.fen());
+	    tempGame.move(move);
+	    return tempGame.in_check();
     });
+
     return { count: checkingMoves.length, moves: checkingMoves.map(move => move.san) };
 }
 
@@ -45,58 +46,165 @@ function switchFenSides(fen, side) {
     return fenParts.join(' ');
 }
 
-// Return array of positions in FEN format
-async function getPositions() {
-    const path = (chess_data.playerToMove == 'b'
-		  ? 'lichess-puzzles/black_small.fen'
-		  : 'lichess-puzzles/white_small.fen');
+// Return array of PGN games
+async function getGames() {
+    // Randomly select one of the four PGN files
+    const fileNumber = Math.floor(Math.random() * 4) + 1;
+    const path = `lichess-puzzles/filtered_games_${fileNumber}.pgn`;
+    console.log('Loading games from:', path);
     const response = await fetch(path);
     const text = await response.text();
-    const positions = text.split('\n');
-    if (positions.length <= 0) {
-	console.log("Error with positions file");
+    console.log('Raw PGN text length:', text.length);
+    
+    // Split into potential games (sections separated by blank lines)
+    const sections = text.split('\n\n').filter(section => section.trim() !== '');
+    
+    // Combine header and moves sections into complete games
+    const games = [];
+    let currentGame = '';
+    
+    for (const section of sections) {
+        if (section.startsWith('[')) {
+            // This is a header section
+            if (currentGame) {
+                // If we have a previous game, save it
+                games.push(currentGame.trim());
+            }
+            currentGame = section;
+        } else {
+            // This is a moves section, append it to the current game
+            currentGame += '\n\n' + section;
+        }
     }
-    return positions;
+    
+    // Don't forget to add the last game
+    if (currentGame) {
+        games.push(currentGame.trim());
+    }
+    
+    console.log('Number of games found:', games.length);
+    
+    if (games.length <= 0) {
+        console.log("Error with PGN file");
+    }
+    return games;
 }
 
-// Grab a random FEN from the FEN text file
-//
-// Example: const fen = '5rk1/pp6/3q3p/2pP2pB/2P5/4Q1P1/PP4PK/8 w - - 8 31';    
-function getRandomPosition(positions) {
-    const randomIndex = Math.floor(Math.random() * positions.length);
-    return positions[randomIndex];
+// Get a random move number within the specified range using exponential distribution
+function getRandomMoveNumber(moves, playerToMove) {
+    // Choose a random move number at least 24 moves in and at most 11 moves from end
+    const minMove = 14; // This has to be even so white still moves first
+    const maxMove = moves.length - 11;
+    
+    // Determine if we need even or odd move number based on desired player to move
+    const needsEven = playerToMove === 'w';
+    const startNum = needsEven ? 0 : 1;
+    
+    // Calculate the range of possible moves
+    const possibleMoves = Math.floor((maxMove - minMove) / 2);
+    
+    // Generate a random number from exponential distribution with half-life of 10
+    // The formula for exponential distribution is: -ln(1 - U) / λ
+    // where U is uniform random [0,1) and λ is the rate parameter
+    // For half-life of 10, λ = ln(2)/10
+    const lambda = Math.log(2) / 6;
+    const u = Math.random();
+    const expRandom = -Math.log(1 - u) / lambda;
+
+    // Convert exponential random number to move offset
+    const moveOffset = Math.floor(Math.min(possibleMoves, expRandom));
+    console.log('expRandom:', expRandom);
+    console.log('possibleMoves:', possibleMoves);
+    console.log('moveOffset:', moveOffset);
+    
+    const result = minMove + (moveOffset * 2) + startNum;
+    console.log('Final move number:', result);
+    return result;
+}
+
+// Get a random position from a random game
+function getRandomPosition(games) {
+    console.log('Total games available:', games.length);
+    if (games.length === 0) {
+        console.error("No games available!");
+        return null;
+    }
+
+    const randomGameIndex = Math.floor(Math.random() * games.length);
+    const game = new Chess();
+    console.log('Selected game index:', randomGameIndex);
+    const pgn = games[randomGameIndex];
+    console.log('PGN length:', pgn.length);
+    
+    // Parse the PGN
+    const parsedGame = game.load_pgn(pgn);
+    if (!parsedGame) {
+        console.log("Error parsing PGN");
+        return null;
+    }
+    
+    // Get a random position from the game
+    const moves = game.history();
+    console.log('Number of moves in game:', moves.length);
+    
+    // Get random even/odd number in our range by stepping by 2
+    const randomMoveNumber = getRandomMoveNumber(moves, chess_data.playerToMove);
+    
+    // Reset the game and play up to the random move
+    game.reset();
+    for (let i = 0; i < randomMoveNumber; i++) {
+        game.move(moves[i]);
+    }
+    
+    // Return both the current FEN and the remaining moves
+    return {
+        fen: game.fen(),
+        remainingMoves: moves.slice(randomMoveNumber)
+    };
 }
 
 // Return object with correct counts for black and white from given fen
 function getCorrectAnswers(fen, questionTypes) {
+    // First, advance the position by plyAhead if needed
+    let advancedFen = fen;
+    if (chess_data.plyAhead > 0 && chess_data.remainingMoves.length >= chess_data.plyAhead) {
+        const game = new Chess(fen);
+        // Make the next plyAhead moves from the game
+        for (let i = 0; i < chess_data.plyAhead; i++) {
+            game.move(chess_data.remainingMoves[i]);
+        }
+        advancedFen = game.fen();
+    }
+
+    // Then compute all the answers using the advanced position
     return questionTypes.reduce((result, quesType) => {
-	result[quesType] = getOneCorrectAnswer(fen, quesType);
-	return result;
+        result[quesType] = getOneCorrectAnswer(advancedFen, quesType);
+        return result;
     }, {});
 }
 
-function getOneCorrectAnswer(fen, questionType) {
+function getOneCorrectAnswer(advancedFen, questionType) {
     let modFen;
     if (questionType.startsWith('p1')) {
-	modFen = fen;
+        modFen = switchFenSides(advancedFen, chess_data.playerToMove);
     } else if (questionType.startsWith('p2')) {
-	p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
-	modFen = switchFenSides(fen, p2Color)
+        p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
+        modFen = switchFenSides(advancedFen, p2Color);
     } else {
-	throw new RangeError('Expected p1 or p2');
+        throw new RangeError('Expected p1 or p2');
     }
 
     const game = new Chess();
     game.load(modFen);
 
     if (questionType.endsWith('Checks')) {
-	return countChecks(game);
+        return countChecks(game);
     } else if (questionType.endsWith('Captures')) {
-	return countCaptures(game);
+        return countCaptures(game);
     } else if (questionType.endsWith('AllLegal')) {
-	return countAllLegal(game);
+        return countAllLegal(game);
     } else {
-	throw new RangeError('Expected Checks or Captures');
+        throw new RangeError('Expected Checks or Captures');
     }
 }
 
@@ -202,31 +310,90 @@ document.querySelectorAll('.decrement').forEach(button => {
 // -----------------------------------------------------------
 // General page code
 
-// Load a new puzzle and reset inputs
+function createMovesTableHtml(movesList, isBlackToMove) {
+    let tableHtml = `
+        <h3>Compute counts after these moves:</h3>
+        <table class="moves-table">
+            <tr>
+                <th>White</th>
+                <th>Black</th>
+            </tr>`;
+    
+    // If it's black's turn, start with an empty white move
+    if (isBlackToMove) {
+        tableHtml += `
+            <tr>
+                <td></td>
+                <td>${movesList[0] || ''}</td>
+            </tr>`;
+        // Start pairing from the second move
+        for (let i = 1; i < movesList.length; i += 2) {
+            const whiteMove = movesList[i] || '';
+            const blackMove = (i + 1 < movesList.length) ? movesList[i + 1] : '';
+            tableHtml += `
+                <tr>
+                    <td>${whiteMove}</td>
+                    <td>${blackMove}</td>
+                </tr>`;
+        }
+    } else {
+        // If it's white's turn, pair moves normally
+        for (let i = 0; i < movesList.length; i += 2) {
+            const whiteMove = movesList[i] || '';
+            const blackMove = (i + 1 < movesList.length) ? movesList[i + 1] : '';
+            tableHtml += `
+                <tr>
+                    <td>${whiteMove}</td>
+                    <td>${blackMove}</td>
+                </tr>`;
+        }
+    }
+    tableHtml += '</table>';
+    
+    return tableHtml;
+}
+
 function loadNewPuzzle() {
-    chess_data.fen = getRandomPosition(chess_data.positions);
+    const position = getRandomPosition(chess_data.games);
+    if (!position) {
+        console.log("Error getting position from PGN");
+        return;
+    }
+    chess_data.fen = position.fen;
+    chess_data.remainingMoves = position.remainingMoves;
     chess_data.board.position(chess_data.fen);
     chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
 
+    // Only show moves table if plyAhead > 0
+    const movesDisplay = document.getElementById('remainingMoves');
+    if (chess_data.plyAhead > 0) {
+        // Create move pairs table
+        const movesList = chess_data.remainingMoves.slice(0, chess_data.plyAhead);
+        const isBlackToMove = chess_data.fen.split(' ')[1] === 'b';
+        movesDisplay.innerHTML = createMovesTableHtml(movesList, isBlackToMove);
+    } else {
+        movesDisplay.innerHTML = ''; // Clear the moves display
+    }
+
     // Initialize all answers to start as false
     chess_data.is_correct = Object.fromEntries(
-	chess_data.questionTypes.map(name => [name, false])
+        chess_data.questionTypes.map(name => [name, false])
     );
 
     console.log(chess_data);
     
     chess_data.questionTypes.forEach((id) => {
-	const input = document.getElementById(id);
+        const input = document.getElementById(id);
         input.value = 0;
         const feedbackIcon = document.getElementById(id + "FeedbackIcon");
         feedbackIcon.textContent = ''; // Clear the feedback icon
         feedbackIcon.className = ''; // Reset the class
-	const shownMovesLabel = document.getElementById(id + "ShownMoves");
-	shownMovesLabel.textContent = ''; // Clear the shown moves list
+        const shownMovesLabel = document.getElementById(id + "ShownMoves");
+        shownMovesLabel.textContent = ''; // Clear the shown moves list
     });
     
     if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
-	document.getElementById(chess_data.questionTypes[0]).focus();
+        document.getElementById(chess_data.questionTypes[0]).focus();
     }
 
     const showMovesButton = document.getElementById("showMovesButton");
@@ -312,7 +479,7 @@ async function saveSettings() {
     setPlayerToMove(selectedToMove.value);
 
     // Set positions and board
-    chess_data.positions = await getPositions();
+    chess_data.games = await getGames();
     setBoard();
     
     // Which count questions are asked
@@ -320,6 +487,11 @@ async function saveSettings() {
     chess_data.questionTypes = Array.from(questionCheckboxes).map(opt => opt.value);
     localStorage.setItem('questionTypes', JSON.stringify(chess_data.questionTypes)); // Save preference
     createDynamicInputs(chess_data.questionTypes);
+    
+    // Save ply ahead setting
+    const plyAhead = parseInt(document.getElementById('plyAhead').value);
+    chess_data.plyAhead = plyAhead;
+    localStorage.setItem('plyAhead', plyAhead);
     
     settings.style.display = "none"; // Close the settings window
     startNewGame();
@@ -339,16 +511,17 @@ function setTimerVisibility(visible) {
 // Load the settings and initialize chess_data
 async function loadSettings() {
     chess_data = {
-	showTimer: true, // whether the game should be timed
-	fen: null, // current position
-	correct: null, // stores the correct numbers of counts
-	defaultTimeRemaining: 180, // default to 3 min
-	timeRemaining: 999, // current time left on clock
-	score: 0,
-	is_correct: null, // stores which counts are correct
-	positions: null, // Array of position strings
-	board: null, // The board object
-	questionTypes: null // Array of questions, as strings, to ask the user
+        showTimer: true, // whether the game should be timed
+        fen: null, // current position
+        correct: null, // stores the correct numbers of counts
+        defaultTimeRemaining: 180, // default to 3 min
+        timeRemaining: 999, // current time left on clock
+        score: 0,
+        is_correct: null, // stores which counts are correct
+        games: null, // Array of PGN games
+        board: null, // The board object
+        questionTypes: null, // Array of questions, as strings, to ask the user
+        plyAhead: 0  // Number of half-moves ahead to visualize
     };
 
     // Timer
@@ -360,34 +533,39 @@ async function loadSettings() {
     // Positions and player to move
     var selectedToMove = localStorage.getItem('selectedToMove');
     if (selectedToMove === null || selectedToMove == '') {
-	selectedToMove = 'Random';
+        selectedToMove = 'Random';
     }
     console.log(selectedToMove);
     document.querySelector(`input[value="${selectedToMove}"]`).checked = true;
     setPlayerToMove(selectedToMove);
     
-    // Load positions
-    chess_data.positions = await getPositions();
+    // Load PGN games
+    chess_data.games = await getGames();
     setBoard();
     
     // Questions
     const storedTypes = localStorage.getItem('questionTypes');
     if (storedTypes !== null && storedTypes != '') {
-	chess_data.questionTypes = JSON.parse(storedTypes)
+        chess_data.questionTypes = JSON.parse(storedTypes)
     } else {
-	chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
+        chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
     }
     // Uncheck each input
     document.querySelectorAll('input[name="quizOption"]').forEach(option => {
-	option.checked = false;
+        option.checked = false;
     });
     // Check the ones that are enabled
     chess_data.questionTypes.forEach(questionType => {
-	document.querySelector(`input[value="${questionType}"]`).checked = true;
+        document.querySelector(`input[value="${questionType}"]`).checked = true;
     })
 
     console.log(chess_data.questionTypes);
     createDynamicInputs(chess_data.questionTypes);
+
+    // Plies ahead
+    const savedPlyAhead = localStorage.getItem('plyAhead');
+    chess_data.plyAhead = savedPlyAhead ? parseInt(savedPlyAhead) : 0;
+    document.getElementById('plyAhead').value = chess_data.plyAhead;
 }
 
 // Set the player to move
@@ -491,4 +669,5 @@ function createDynamicInputsLabel(questionType) {
     await loadSettings();
     startNewGame();
 })();
+
 
