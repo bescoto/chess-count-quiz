@@ -249,7 +249,49 @@ document.querySelectorAll('.decrement').forEach(button => {
 // -----------------------------------------------------------
 // General page code
 
-// Load a new puzzle and reset inputs
+function createMovesTableHtml(movesList, isBlackToMove) {
+    let tableHtml = `
+        <h3>Compute counts after these moves:</h3>
+        <table class="moves-table">
+            <tr>
+                <th>White</th>
+                <th>Black</th>
+            </tr>`;
+    
+    // If it's black's turn, start with an empty white move
+    if (isBlackToMove) {
+        tableHtml += `
+            <tr>
+                <td></td>
+                <td>${movesList[0] || ''}</td>
+            </tr>`;
+        // Start pairing from the second move
+        for (let i = 1; i < movesList.length; i += 2) {
+            const whiteMove = movesList[i] || '';
+            const blackMove = (i + 1 < movesList.length) ? movesList[i + 1] : '';
+            tableHtml += `
+                <tr>
+                    <td>${whiteMove}</td>
+                    <td>${blackMove}</td>
+                </tr>`;
+        }
+    } else {
+        // If it's white's turn, pair moves normally
+        for (let i = 0; i < movesList.length; i += 2) {
+            const whiteMove = movesList[i] || '';
+            const blackMove = (i + 1 < movesList.length) ? movesList[i + 1] : '';
+            tableHtml += `
+                <tr>
+                    <td>${whiteMove}</td>
+                    <td>${blackMove}</td>
+                </tr>`;
+        }
+    }
+    tableHtml += '</table>';
+    
+    return tableHtml;
+}
+
 function loadNewPuzzle() {
     const position = getRandomPosition(chess_data.games);
     if (!position) {
@@ -262,34 +304,12 @@ function loadNewPuzzle() {
     chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
 
     // Create move pairs table
-    const movesToShow = Math.min(chess_data.remainingMoves.length, chess_data.plyAhead);
-    const movesList = chess_data.remainingMoves.slice(0, movesToShow);
+    const movesList = chess_data.remainingMoves.slice(0, chess_data.plyAhead);
+    const isBlackToMove = chess_data.fen.split(' ')[1] === 'b';
+    
+    // Generate and display the moves table
     const movesDisplay = document.getElementById('remainingMoves');
-    
-    // Create the table HTML
-    let tableHtml = `
-        <table class="moves-table">
-            <tr>
-                <th>#</th>
-                <th>White</th>
-                <th>Black</th>
-            </tr>`;
-    
-    // Group moves into pairs and create table rows
-    for (let i = 0; i < movesList.length; i += 2) {
-        const moveNumber = Math.floor(i/2) + 1;
-        const whiteMove = movesList[i] || '';
-        const blackMove = (i + 1 < movesList.length) ? movesList[i + 1] : '';
-        tableHtml += `
-            <tr>
-                <td>${moveNumber}.</td>
-                <td>${whiteMove}</td>
-                <td>${blackMove}</td>
-            </tr>`;
-    }
-    tableHtml += '</table>';
-    
-    movesDisplay.innerHTML = tableHtml;
+    movesDisplay.innerHTML = createMovesTableHtml(movesList, isBlackToMove);
 
     // Initialize all answers to start as false
     chess_data.is_correct = Object.fromEntries(
