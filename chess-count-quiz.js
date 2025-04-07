@@ -48,7 +48,9 @@ function switchFenSides(fen, side) {
 
 // Return array of PGN games
 async function getGames() {
-    const path = 'lichess-puzzles/filtered_games_1.pgn';
+    // Randomly select one of the four PGN files
+    const fileNumber = Math.floor(Math.random() * 4) + 1;
+    const path = `lichess-puzzles/filtered_games_${fileNumber}.pgn`;
     console.log('Loading games from:', path);
     const response = await fetch(path);
     const text = await response.text();
@@ -81,8 +83,6 @@ async function getGames() {
     }
     
     console.log('Number of games found:', games.length);
-    console.log('First game length:', games[0]?.length);
-    console.log('Last game length:', games[games.length - 1]?.length);
     
     if (games.length <= 0) {
         console.log("Error with PGN file");
