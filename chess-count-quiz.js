@@ -2,6 +2,7 @@
 // Global variables
 
 let chess_data = null; // See loadSettings for value of chess_data
+let pgn_games = []; // Array to store loaded PGN games
 
 
 // -----------------------------------------------------------
@@ -12,13 +13,16 @@ function countChecks(game) {
     let checks = 0;
     const moves = game.moves({ verbose: true }); // Get all moves with details
 
-    // Temporary game instance to make moves without affecting the original game
+    console.log("Current position:", game.fen()); // Log the current position
 
+    // Temporary game instance to make moves without affecting the original game
     var checkingMoves = moves.filter(move => {
-	let tempGame = new Chess(game.fen());
-	tempGame.move(move);
-	return tempGame.in_check();
+	    let tempGame = new Chess(game.fen());
+	    tempGame.move(move);
+	    return tempGame.in_check();
     });
+
+    console.log("Checking moves:", checkingMoves.map(move => move.san)); // Log the checking moves
     return { count: checkingMoves.length, moves: checkingMoves.map(move => move.san) };
 }
 
@@ -45,26 +49,53 @@ function switchFenSides(fen, side) {
     return fenParts.join(' ');
 }
 
-// Return array of positions in FEN format
-async function getPositions() {
-    const path = (chess_data.playerToMove == 'b'
-		  ? 'lichess-puzzles/black_small.fen'
-		  : 'lichess-puzzles/white_small.fen');
+// Return array of PGN games
+async function getGames() {
+    const path = 'lichess-puzzles/filtered_games_1.pgn';
     const response = await fetch(path);
     const text = await response.text();
-    const positions = text.split('\n');
-    if (positions.length <= 0) {
-	console.log("Error with positions file");
+    const games = text.split('\n\n\n'); // Split by double newlines to separate games
+    if (games.length <= 0) {
+        console.log("Error with PGN file");
     }
-    return positions;
+    return games;
 }
 
-// Grab a random FEN from the FEN text file
-//
-// Example: const fen = '5rk1/pp6/3q3p/2pP2pB/2P5/4Q1P1/PP4PK/8 w - - 8 31';    
-function getRandomPosition(positions) {
-    const randomIndex = Math.floor(Math.random() * positions.length);
-    return positions[randomIndex];
+// Get a random position from a random game
+function getRandomPosition(games) {
+    const randomGameIndex = Math.floor(Math.random() * games.length);
+    const game = new Chess();
+    const pgn = games[randomGameIndex];
+    
+    // Parse the PGN
+    const parsedGame = game.load_pgn(pgn);
+    if (!parsedGame) {
+        console.log("Error parsing PGN");
+        return null;
+    }
+    
+    // Get a random position from the game
+    const moves = game.history();
+    
+    // Choose a random move number at least 24 moves in and at most 11 moves from end
+    const minMove = 24; // This has to be even so we preserve 
+    const maxMove = moves.length - 11;
+    
+    // Determine if we need even or odd move number based on desired player to move
+    const needsEven = chess_data.playerToMove === 'w';
+    const startNum = needsEven ? 0 : 1;
+    
+    // Get random even/odd number in our range by stepping by 2
+    const possibleMoves = Math.floor((maxMove - minMove) / 2);
+    const randomMoveNumber = minMove + (Math.floor(Math.random() * possibleMoves) * 2) + startNum;
+    
+    // Reset the game and play up to the random move
+    game.reset();
+    for (let i = 0; i < randomMoveNumber; i++) {
+        game.move(moves[i]);
+    }
+    
+    return game.fen();
 }
 
 // Return object with correct counts for black and white from given fen
@@ -78,25 +109,25 @@ function getCorrectAnswers(fen, questionTypes) {
 function getOneCorrectAnswer(fen, questionType) {
     let modFen;
     if (questionType.startsWith('p1')) {
-	modFen = fen;
+	    modFen = fen;
     } else if (questionType.startsWith('p2')) {
-	p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
-	modFen = switchFenSides(fen, p2Color)
+	    p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
+	    modFen = switchFenSides(fen, p2Color)
     } else {
-	throw new RangeError('Expected p1 or p2');
+	    throw new RangeError('Expected p1 or p2');
     }
 
     const game = new Chess();
     game.load(modFen);
 
     if (questionType.endsWith('Checks')) {
-	return countChecks(game);
+	    return countChecks(game);
     } else if (questionType.endsWith('Captures')) {
-	return countCaptures(game);
+	    return countCaptures(game);
     } else if (questionType.endsWith('AllLegal')) {
-	return countAllLegal(game);
+	    return countAllLegal(game);
     } else {
-	throw new RangeError('Expected Checks or Captures');
+	    throw new RangeError('Expected Checks or Captures');
     }
 }
 
@@ -204,29 +235,33 @@ document.querySelectorAll('.decrement').forEach(button => {
 
 // Load a new puzzle and reset inputs
 function loadNewPuzzle() {
-    chess_data.fen = getRandomPosition(chess_data.positions);
+    chess_data.fen = getRandomPosition(chess_data.games);
+    if (!chess_data.fen) {
+        console.log("Error getting position from PGN");
+        return;
+    }
     chess_data.board.position(chess_data.fen);
     chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
 
     // Initialize all answers to start as false
     chess_data.is_correct = Object.fromEntries(
-	chess_data.questionTypes.map(name => [name, false])
+        chess_data.questionTypes.map(name => [name, false])
     );
 
     console.log(chess_data);
     
     chess_data.questionTypes.forEach((id) => {
-	const input = document.getElementById(id);
+        const input = document.getElementById(id);
         input.value = 0;
         const feedbackIcon = document.getElementById(id + "FeedbackIcon");
         feedbackIcon.textContent = ''; // Clear the feedback icon
         feedbackIcon.className = ''; // Reset the class
-	const shownMovesLabel = document.getElementById(id + "ShownMoves");
-	shownMovesLabel.textContent = ''; // Clear the shown moves list
+        const shownMovesLabel = document.getElementById(id + "ShownMoves");
+        shownMovesLabel.textContent = ''; // Clear the shown moves list
     });
     
     if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
-	document.getElementById(chess_data.questionTypes[0]).focus();
+        document.getElementById(chess_data.questionTypes[0]).focus();
     }
 
     const showMovesButton = document.getElementById("showMovesButton");
@@ -312,7 +347,7 @@ async function saveSettings() {
     setPlayerToMove(selectedToMove.value);
 
     // Set positions and board
-    chess_data.positions = await getPositions();
+    chess_data.games = await getGames();
     setBoard();
     
     // Which count questions are asked
@@ -339,16 +374,16 @@ function setTimerVisibility(visible) {
 // Load the settings and initialize chess_data
 async function loadSettings() {
     chess_data = {
-	showTimer: true, // whether the game should be timed
-	fen: null, // current position
-	correct: null, // stores the correct numbers of counts
-	defaultTimeRemaining: 180, // default to 3 min
-	timeRemaining: 999, // current time left on clock
-	score: 0,
-	is_correct: null, // stores which counts are correct
-	positions: null, // Array of position strings
-	board: null, // The board object
-	questionTypes: null // Array of questions, as strings, to ask the user
+        showTimer: true, // whether the game should be timed
+        fen: null, // current position
+        correct: null, // stores the correct numbers of counts
+        defaultTimeRemaining: 180, // default to 3 min
+        timeRemaining: 999, // current time left on clock
+        score: 0,
+        is_correct: null, // stores which counts are correct
+        games: null, // Array of PGN games
+        board: null, // The board object
+        questionTypes: null // Array of questions, as strings, to ask the user
     };
 
     // Timer
@@ -360,30 +395,30 @@ async function loadSettings() {
     // Positions and player to move
     var selectedToMove = localStorage.getItem('selectedToMove');
     if (selectedToMove === null || selectedToMove == '') {
-	selectedToMove = 'Random';
+        selectedToMove = 'Random';
     }
     console.log(selectedToMove);
     document.querySelector(`input[value="${selectedToMove}"]`).checked = true;
     setPlayerToMove(selectedToMove);
     
-    // Load positions
-    chess_data.positions = await getPositions();
+    // Load PGN games
+    chess_data.games = await getGames();
     setBoard();
     
     // Questions
     const storedTypes = localStorage.getItem('questionTypes');
     if (storedTypes !== null && storedTypes != '') {
-	chess_data.questionTypes = JSON.parse(storedTypes)
+        chess_data.questionTypes = JSON.parse(storedTypes)
     } else {
-	chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
+        chess_data.questionTypes = ['p1Checks', 'p1Captures', 'p2Checks', 'p2Captures'];
     }
     // Uncheck each input
     document.querySelectorAll('input[name="quizOption"]').forEach(option => {
-	option.checked = false;
+        option.checked = false;
     });
     // Check the ones that are enabled
     chess_data.questionTypes.forEach(questionType => {
-	document.querySelector(`input[value="${questionType}"]`).checked = true;
+        document.querySelector(`input[value="${questionType}"]`).checked = true;
     })
 
     console.log(chess_data.questionTypes);
