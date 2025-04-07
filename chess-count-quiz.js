@@ -78,7 +78,7 @@ function getRandomPosition(games) {
     const moves = game.history();
     
     // Choose a random move number at least 24 moves in and at most 11 moves from end
-    const minMove = 24; // This has to be even so we preserve 
+    const minMove = 24; // This has to be even so white still moves first
     const maxMove = moves.length - 11;
     
     // Determine if we need even or odd move number based on desired player to move
@@ -95,39 +95,55 @@ function getRandomPosition(games) {
         game.move(moves[i]);
     }
     
-    return game.fen();
+    // Return both the current FEN and the remaining moves
+    return {
+        fen: game.fen(),
+        remainingMoves: moves.slice(randomMoveNumber)
+    };
 }
 
 // Return object with correct counts for black and white from given fen
 function getCorrectAnswers(fen, questionTypes) {
+    // First, advance the position by plyAhead if needed
+    let advancedFen = fen;
+    if (chess_data.plyAhead > 0 && chess_data.remainingMoves.length >= chess_data.plyAhead) {
+        const game = new Chess(fen);
+        // Make the next plyAhead moves from the game
+        for (let i = 0; i < chess_data.plyAhead; i++) {
+            game.move(chess_data.remainingMoves[i]);
+        }
+        advancedFen = game.fen();
+    }
+
+    // Then compute all the answers using the advanced position
     return questionTypes.reduce((result, quesType) => {
-	result[quesType] = getOneCorrectAnswer(fen, quesType);
-	return result;
+        result[quesType] = getOneCorrectAnswer(advancedFen, quesType);
+        return result;
     }, {});
 }
 
-function getOneCorrectAnswer(fen, questionType) {
+function getOneCorrectAnswer(advancedFen, questionType) {
     let modFen;
     if (questionType.startsWith('p1')) {
-	    modFen = fen;
+        modFen = switchFenSides(advancedFen, chess_data.playerToMove);
     } else if (questionType.startsWith('p2')) {
-	    p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
-	    modFen = switchFenSides(fen, p2Color)
+        p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
+        modFen = switchFenSides(advancedFen, p2Color);
     } else {
-	    throw new RangeError('Expected p1 or p2');
+        throw new RangeError('Expected p1 or p2');
     }
 
     const game = new Chess();
     game.load(modFen);
 
     if (questionType.endsWith('Checks')) {
-	    return countChecks(game);
+        return countChecks(game);
     } else if (questionType.endsWith('Captures')) {
-	    return countCaptures(game);
+        return countCaptures(game);
     } else if (questionType.endsWith('AllLegal')) {
-	    return countAllLegal(game);
+        return countAllLegal(game);
     } else {
-	    throw new RangeError('Expected Checks or Captures');
+        throw new RangeError('Expected Checks or Captures');
     }
 }
 
@@ -235,13 +251,45 @@ document.querySelectorAll('.decrement').forEach(button => {
 
 // Load a new puzzle and reset inputs
 function loadNewPuzzle() {
-    chess_data.fen = getRandomPosition(chess_data.games);
-    if (!chess_data.fen) {
+    const position = getRandomPosition(chess_data.games);
+    if (!position) {
         console.log("Error getting position from PGN");
         return;
     }
+    chess_data.fen = position.fen;
+    chess_data.remainingMoves = position.remainingMoves;
     chess_data.board.position(chess_data.fen);
     chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
+
+    // Create move pairs table
+    const movesToShow = Math.min(chess_data.remainingMoves.length, chess_data.plyAhead);
+    const movesList = chess_data.remainingMoves.slice(0, movesToShow);
+    const movesDisplay = document.getElementById('remainingMoves');
+    
+    // Create the table HTML
+    let tableHtml = `
+        <table class="moves-table">
+            <tr>
+                <th>#</th>
+                <th>White</th>
+                <th>Black</th>
+            </tr>`;
+    
+    // Group moves into pairs and create table rows
+    for (let i = 0; i < movesList.length; i += 2) {
+        const moveNumber = Math.floor(i/2) + 1;
+        const whiteMove = movesList[i] || '';
+        const blackMove = (i + 1 < movesList.length) ? movesList[i + 1] : '';
+        tableHtml += `
+            <tr>
+                <td>${moveNumber}.</td>
+                <td>${whiteMove}</td>
+                <td>${blackMove}</td>
+            </tr>`;
+    }
+    tableHtml += '</table>';
+    
+    movesDisplay.innerHTML = tableHtml;
 
     // Initialize all answers to start as false
     chess_data.is_correct = Object.fromEntries(
@@ -537,4 +585,5 @@ function createDynamicInputsLabel(questionType) {
     await loadSettings();
     startNewGame();
 })();
+
 

@@ -125,3 +125,36 @@ input[type="number"]::-ms-reveal {
     text-decoration: none;
     cursor: pointer;
 }
+
+#remainingMoves {
+    font-family: monospace;
+    margin: 10px 0;
+    padding: 5px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.moves-table {
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-family: monospace;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.moves-table th,
+.moves-table td {
+    padding: 4px 8px;
+    text-align: left;
+}
+
+.moves-table th {
+    background-color: #e0e0e0;
+    font-weight: bold;
+}
+
+.moves-table td:first-child {
+    color: #666;
+    text-align: right;
+}
