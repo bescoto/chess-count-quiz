@@ -13,8 +13,6 @@ function countChecks(game) {
     let checks = 0;
     const moves = game.moves({ verbose: true }); // Get all moves with details
 
-    console.log("Current position:", game.fen()); // Log the current position
-
     // Temporary game instance to make moves without affecting the original game
     var checkingMoves = moves.filter(move => {
 	    let tempGame = new Chess(game.fen());
@@ -22,7 +20,6 @@ function countChecks(game) {
 	    return tempGame.in_check();
     });
 
-    console.log("Checking moves:", checkingMoves.map(move => move.san)); // Log the checking moves
     return { count: checkingMoves.length, moves: checkingMoves.map(move => move.san) };
 }
 
@@ -52,20 +49,92 @@ function switchFenSides(fen, side) {
 // Return array of PGN games
 async function getGames() {
     const path = 'lichess-puzzles/filtered_games_1.pgn';
+    console.log('Loading games from:', path);
     const response = await fetch(path);
     const text = await response.text();
-    const games = text.split('\n\n\n'); // Split by double newlines to separate games
+    console.log('Raw PGN text length:', text.length);
+    
+    // Split into potential games (sections separated by blank lines)
+    const sections = text.split('\n\n').filter(section => section.trim() !== '');
+    
+    // Combine header and moves sections into complete games
+    const games = [];
+    let currentGame = '';
+    
+    for (const section of sections) {
+        if (section.startsWith('[')) {
+            // This is a header section
+            if (currentGame) {
+                // If we have a previous game, save it
+                games.push(currentGame.trim());
+            }
+            currentGame = section;
+        } else {
+            // This is a moves section, append it to the current game
+            currentGame += '\n\n' + section;
+        }
+    }
+    
+    // Don't forget to add the last game
+    if (currentGame) {
+        games.push(currentGame.trim());
+    }
+    
+    console.log('Number of games found:', games.length);
+    console.log('First game length:', games[0]?.length);
+    console.log('Last game length:', games[games.length - 1]?.length);
+    
     if (games.length <= 0) {
         console.log("Error with PGN file");
     }
     return games;
 }
 
+// Get a random move number within the specified range using exponential distribution
+function getRandomMoveNumber(moves, playerToMove) {
+    // Choose a random move number at least 24 moves in and at most 11 moves from end
+    const minMove = 14; // This has to be even so white still moves first
+    const maxMove = moves.length - 11;
+    
+    // Determine if we need even or odd move number based on desired player to move
+    const needsEven = playerToMove === 'w';
+    const startNum = needsEven ? 0 : 1;
+    
+    // Calculate the range of possible moves
+    const possibleMoves = Math.floor((maxMove - minMove) / 2);
+    
+    // Generate a random number from exponential distribution with half-life of 10
+    // The formula for exponential distribution is: -ln(1 - U) / λ
+    // where U is uniform random [0,1) and λ is the rate parameter
+    // For half-life of 10, λ = ln(2)/10
+    const lambda = Math.log(2) / 6;
+    const u = Math.random();
+    const expRandom = -Math.log(1 - u) / lambda;
+
+    // Convert exponential random number to move offset
+    const moveOffset = Math.floor(Math.min(possibleMoves, expRandom));
+    console.log('expRandom:', expRandom);
+    console.log('possibleMoves:', possibleMoves);
+    console.log('moveOffset:', moveOffset);
+    
+    const result = minMove + (moveOffset * 2) + startNum;
+    console.log('Final move number:', result);
+    return result;
+}
+
 // Get a random position from a random game
 function getRandomPosition(games) {
+    console.log('Total games available:', games.length);
+    if (games.length === 0) {
+        console.error("No games available!");
+        return null;
+    }
+
     const randomGameIndex = Math.floor(Math.random() * games.length);
     const game = new Chess();
+    console.log('Selected game index:', randomGameIndex);
     const pgn = games[randomGameIndex];
+    console.log('PGN length:', pgn.length);
     
     // Parse the PGN
     const parsedGame = game.load_pgn(pgn);
@@ -76,18 +145,10 @@ function getRandomPosition(games) {
     
     // Get a random position from the game
     const moves = game.history();
-    
-    // Choose a random move number at least 24 moves in and at most 11 moves from end
-    const minMove = 24; // This has to be even so white still moves first
-    const maxMove = moves.length - 11;
-    
-    // Determine if we need even or odd move number based on desired player to move
-    const needsEven = chess_data.playerToMove === 'w';
-    const startNum = needsEven ? 0 : 1;
+    console.log('Number of moves in game:', moves.length);
     
     // Get random even/odd number in our range by stepping by 2
-    const possibleMoves = Math.floor((maxMove - minMove) / 2);
-    const randomMoveNumber = minMove + (Math.floor(Math.random() * possibleMoves) * 2) + startNum;
+    const randomMoveNumber = getRandomMoveNumber(moves, chess_data.playerToMove);
     
     // Reset the game and play up to the random move
     game.reset();
