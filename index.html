@@ -53,7 +53,14 @@
             <label><input type="checkbox" id="enableP2Captures" name="quizOption" value="p2Captures">Count player 2's Captures</label>
           </div>
 	  <br>
-	  
+
+          <div>
+            <label>Plies ahead to visualize:
+              <input type="number" id="plyAhead" min="0" max="10" value="0" style="width: 60px">
+            </label>
+          </div>
+    <br>
+
           <button type="button" onclick="saveSettings()">Save Settings</button>
         </form>
       </div>

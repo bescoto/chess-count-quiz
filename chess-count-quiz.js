@@ -356,6 +356,11 @@ async function saveSettings() {
     localStorage.setItem('questionTypes', JSON.stringify(chess_data.questionTypes)); // Save preference
     createDynamicInputs(chess_data.questionTypes);
     
+    // Save ply ahead setting
+    const plyAhead = parseInt(document.getElementById('plyAhead').value);
+    chess_data.plyAhead = plyAhead;
+    localStorage.setItem('plyAhead', plyAhead);
+    
     settings.style.display = "none"; // Close the settings window
     startNewGame();
 }
@@ -383,7 +388,8 @@ async function loadSettings() {
         is_correct: null, // stores which counts are correct
         games: null, // Array of PGN games
         board: null, // The board object
-        questionTypes: null // Array of questions, as strings, to ask the user
+        questionTypes: null, // Array of questions, as strings, to ask the user
+        plyAhead: 0  // Number of half-moves ahead to visualize
     };
 
     // Timer
@@ -423,6 +429,11 @@ async function loadSettings() {
 
     console.log(chess_data.questionTypes);
     createDynamicInputs(chess_data.questionTypes);
+
+    // Plies ahead
+    const savedPlyAhead = localStorage.getItem('plyAhead');
+    chess_data.plyAhead = savedPlyAhead ? parseInt(savedPlyAhead) : 0;
+    document.getElementById('plyAhead').value = chess_data.plyAhead;
 }
 
 // Set the player to move
