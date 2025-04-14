@@ -49,8 +49,7 @@ function switchFenSides(fen, side) {
 // Return array of PGN games
 async function getGames() {
     // Randomly select one of the four PGN files
-    const fileNumber = Math.floor(Math.random() * 4) + 1;
-    const path = `lichess-puzzles/filtered_games_${fileNumber}.pgn`;
+    const path = "lichess-puzzles/selected_games.pgn";
     console.log('Loading games from:', path);
     const response = await fetch(path);
     const text = await response.text();
@@ -90,6 +89,52 @@ async function getGames() {
     return games;
 }
 
+// Load the game weights file and return parsed weights
+async function getWeights() {
+    const path = "lichess-puzzles/selected_weights.json"
+    try {
+	const response = await fetch(path);
+	if (!response.ok) {
+	    throw new Error(`HTTP error! Status: ${response.status}`);
+	}
+	const weights = await response.json();
+	console.log(`Loaded ${weights.length} weight rows`);
+	return weights;
+    } catch (error) {
+	console.error('Failed to load game stats:', error);
+	return null;
+    }
+}
+
+function getRandomPosNumber(game_weights, white) {
+    // Filter entries based on the boolean 'white'
+    // white => pick even 'ply', false => pick odd 'ply'
+    const filtered = game_weights.filter(entry => white ? (entry.ply % 2 === 0) : (entry.ply % 2 !== 0));
+
+    // Check if there are any entries after filtering
+    if (filtered.length === 0) {
+	throw new Error("No entries available for the specified color.");
+    }
+
+    // Calculate the total weight of the filtered entries
+    const totalWeight = filtered.reduce((sum, entry) => sum + entry.weight, 0);
+  
+    // Generate a random number between 0 (inclusive) and totalWeight (exclusive)
+    let threshold = Math.random() * totalWeight;
+  
+    // Loop through the filtered entries, subtracting each weight from the threshold.
+    for (let i = 0; i < filtered.length; i++) {
+	threshold -= filtered[i].weight;
+	if (threshold < 0) {
+	    console.log(`Selected: game=${filtered[i].game}, ply=${filtered[i].ply}, weight=${filtered[i].weight}`);
+	    return {
+		game: filtered[i].game,
+		ply: filtered[i].ply
+	    };
+	}
+    }
+}
+
 // Get a random move number within the specified range using exponential distribution
 function getRandomMoveNumber(moves, playerToMove) {
     // Choose a random move number at least 24 moves in and at most 11 moves from end
@@ -122,81 +167,42 @@ function getRandomMoveNumber(moves, playerToMove) {
     return result;
 }
 
-// Get a random position from a random game
-function getRandomPosition(games) {
-    console.log('Total games available:', games.length);
-    if (games.length === 0) {
-        console.error("No games available!");
-        return null;
-    }
-
-    const randomGameIndex = Math.floor(Math.random() * games.length);
+// Return a game object with the given index
+function getGame(game_index, ply) {
     const game = new Chess();
-    console.log('Selected game index:', randomGameIndex);
-    const pgn = games[randomGameIndex];
-    console.log('PGN length:', pgn.length);
+    const pgn = chess_data.games[game_index]
+    console.log('PGN length:', pgn.length);    
     
-    // Parse the PGN
     const parsedGame = game.load_pgn(pgn);
     if (!parsedGame) {
         console.log("Error parsing PGN");
         return null;
     }
-    
-    // Get a random position from the game
-    const moves = game.history();
-    console.log('Number of moves in game:', moves.length);
-    
-    // Get random even/odd number in our range by stepping by 2
-    const randomMoveNumber = getRandomMoveNumber(moves, chess_data.playerToMove);
-    
+
     // Reset the game and play up to the random move
+    const moves = game.history();
     game.reset();
-    for (let i = 0; i < randomMoveNumber; i++) {
+    for (let i = 0; i < ply; i++) {
         game.move(moves[i]);
     }
-    
-    // Return both the current FEN and the remaining moves
-    return {
-        fen: game.fen(),
-        remainingMoves: moves.slice(randomMoveNumber)
-    };
+    return game;
 }
 
 // Return object with correct counts for black and white from given fen
 function getCorrectAnswers(fen, questionTypes) {
-    // First, advance the position by plyAhead if needed
-    const game = new Chess(fen);
-
-    if (chess_data.plyAhead > 0 && chess_data.remainingMoves.length >= chess_data.plyAhead) {
-        // Make the next plyAhead moves from the game
-        for (let i = 0; i < chess_data.plyAhead; i++) {
-            game.move(chess_data.remainingMoves[i]);
-        }
-    }
-
-    let advancedFen = game.fen();
-
-    // Check if either side is in check in the advanced position
-    if (game.in_check() || game.in_checkmate()) {
-        console.log("Skipping position where a side is in check");
-        return null;
-    }
-
-    // Then compute all the answers using the advanced position
     return questionTypes.reduce((result, quesType) => {
-        result[quesType] = getOneCorrectAnswer(advancedFen, quesType);
+        result[quesType] = getOneCorrectAnswer(fen, quesType);
         return result;
     }, {});
 }
 
-function getOneCorrectAnswer(advancedFen, questionType) {
+function getOneCorrectAnswer(fen, questionType) {
     let modFen;
     if (questionType.startsWith('p1')) {
-        modFen = switchFenSides(advancedFen, chess_data.playerToMove);
+        modFen = switchFenSides(fen, chess_data.playerToMove);
     } else if (questionType.startsWith('p2')) {
         p2Color = chess_data.playerToMove == 'w' ? 'b' : 'w';
-        modFen = switchFenSides(advancedFen, p2Color);
+        modFen = switchFenSides(fen, p2Color);
     } else {
         throw new RangeError('Expected p1 or p2');
     }
@@ -360,71 +366,69 @@ function createMovesTableHtml(movesList, isBlackToMove) {
     return tableHtml;
 }
 
+// Set the remainingMoves div based on the current game
+function updateMovesDisplay() {
+    const movesDisplay = document.getElementById('remainingMoves');
+    if (chess_data.plyAhead == 0) {
+        movesDisplay.innerHTML = ''; // Clear the moves display
+	return;
+    }
+
+    const fullHistory = chess_data.game.history();
+    const prevPlyIndex = fullHistory.length - chess_data.plyAhead;
+    const movesList = fullHistory.slice(prevPlyIndex);
+    const isBlackToMove = chess_data.fen.split(' ')[1] === 'b';
+    movesDisplay.innerHTML = createMovesTableHtml(movesList, isBlackToMove);
+}
+
 function loadNewPuzzle() {
     // Try a number of times to get a valid position
-    for (let attempts = 0; attempts < 20; attempts++) {
-        const position = getRandomPosition(chess_data.games);
-        if (!position) {
-            console.log("Error getting position from PGN");
-            continue;
-        }
-        chess_data.fen = position.fen;
-        chess_data.remainingMoves = position.remainingMoves;
-        chess_data.board.position(chess_data.fen);
-        
-        // Get correct answers, which may return null if a side is in check
-        const correctAnswers = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
-        if (correctAnswers === null) {
-            console.log("Position has check, trying another position");
-            continue;
-        }
-        chess_data.correct = correctAnswers;
+    const game_and_ply = getRandomPosNumber(chess_data.game_weights,
+					    white=chess_data.playerToMove == 'w');
 
-        // Only show moves table if plyAhead > 0
-        const movesDisplay = document.getElementById('remainingMoves');
-        if (chess_data.plyAhead > 0) {
-            // Create move pairs table
-            const movesList = chess_data.remainingMoves.slice(0, chess_data.plyAhead);
-            const isBlackToMove = chess_data.fen.split(' ')[1] === 'b';
-            movesDisplay.innerHTML = createMovesTableHtml(movesList, isBlackToMove);
-        } else {
-            movesDisplay.innerHTML = ''; // Clear the moves display
-        }
+    chess_data.game_index = game_and_ply.game;
+    chess_data.ply = game_and_ply.ply;
 
-        // Initialize all answers to start as false
-        chess_data.is_correct = Object.fromEntries(
-            chess_data.questionTypes.map(name => [name, false])
-        );
-
-        console.log(chess_data);
-        
-        chess_data.questionTypes.forEach((id) => {
-            const input = document.getElementById(id);
-            input.value = 0;
-            const feedbackIcon = document.getElementById(id + "FeedbackIcon");
-            feedbackIcon.textContent = ''; // Clear the feedback icon
-            feedbackIcon.className = ''; // Reset the class
-            const shownMovesLabel = document.getElementById(id + "ShownMoves");
-            shownMovesLabel.textContent = ''; // Clear the shown moves list
-        });
-        
-        if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
-            document.getElementById(chess_data.questionTypes[0]).focus();
-        }
-
-        const showMovesButton = document.getElementById("showMovesButton");
-        showMovesButton.disabled = false;
-        showMovesButton.style.backgroundColor = "";    
-        
-        // Add submit form listener
-        document.getElementById('chessCountForm').addEventListener('submit', submitAnswers);
-        
-        // If we got here, we have a valid position
-        return;
-    }
+    chess_data.game = getGame(game_and_ply.game, game_and_ply.ply);
+    chess_data.fen = chess_data.game.fen();
     
-    // If we get here, we failed to find a valid position after 20 attempts
-    console.error("Failed to find a valid position after 20 attempts");
+    // Need to set the board position to the earlier move
+    const prior_game = getGame(game_and_ply.game,
+			       Math.max(0, game_and_ply.ply - chess_data.plyAhead))
+    chess_data.board.position(prior_game.fen());
+
+    updateMovesDisplay();
+    
+    // Get correct answers, which may return null if a side is in check
+    chess_data.correct = getCorrectAnswers(chess_data.fen, chess_data.questionTypes);
+
+    // Initialize all answers to start as false
+    chess_data.is_correct = Object.fromEntries(
+        chess_data.questionTypes.map(name => [name, false])
+    );
+
+    console.log(chess_data);
+        
+    chess_data.questionTypes.forEach((id) => {
+        const input = document.getElementById(id);
+        input.value = 0;
+        const feedbackIcon = document.getElementById(id + "FeedbackIcon");
+        feedbackIcon.textContent = ''; // Clear the feedback icon
+        feedbackIcon.className = ''; // Reset the class
+        const shownMovesLabel = document.getElementById(id + "ShownMoves");
+        shownMovesLabel.textContent = ''; // Clear the shown moves list
+    });
+        
+    if (window.innerWidth > 768 && !('ontouchstart' in window || navigator.maxTouchPoints)) {
+        document.getElementById(chess_data.questionTypes[0]).focus();
+    }
+
+    const showMovesButton = document.getElementById("showMovesButton");
+    showMovesButton.disabled = false;
+    showMovesButton.style.backgroundColor = "";    
+        
+    // Add submit form listener
+    document.getElementById('chessCountForm').addEventListener('submit', submitAnswers);
 }
 
 function startNewGame() {
@@ -501,8 +505,9 @@ async function saveSettings() {
     localStorage.setItem('selectedToMove', selectedToMove.value); // Save preference
     setPlayerToMove(selectedToMove.value);
 
-    // Set positions and board
+    // Set positions, weights, and board
     chess_data.games = await getGames();
+    chess_data.game_weights = await getWeights();
     setBoard();
     
     // Which count questions are asked
@@ -562,8 +567,9 @@ async function loadSettings() {
     document.querySelector(`input[value="${selectedToMove}"]`).checked = true;
     setPlayerToMove(selectedToMove);
     
-    // Load PGN games
+    // Load weights and PGN games
     chess_data.games = await getGames();
+    chess_data.game_weights = await getWeights();
     setBoard();
     
     // Questions
