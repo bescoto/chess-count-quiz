@@ -239,10 +239,54 @@ function penalizeTime() {
     chess_data.timeRemaining = Math.max(0, chess_data.timeRemaining - 10); // lose 10 seconds per wrong answer
     updateTimerDisplay(chess_data);
 }
-    
+
+// Returns the current day as a string in ISO 8601 string (2025-01-01).
+function getDateAsString() {
+    // en-CA is one of the locales that use the wanted date format
+    // ISO 8601 is required here, because we require the dates to be alphabetically sorted.
+    return new Intl.DateTimeFormat('en-CA').format(new Date());
+}
+
+// Called on game over, saves game score in the local storage.
+function saveScore(newScore) {
+    var scores = JSON.parse(localStorage.getItem("scores"));
+    if (scores === null) {
+        scores = {}
+    }
+    let today = getDateAsString()
+    if (scores[today] === undefined) {
+        scores[today] = {
+            tries: 0,
+            best: 0,
+        };
+        console.log(scores[today]);
+    }
+    scores[today].tries += 1;
+    scores[today].best = Math.max(scores[today].best, newScore)
+    localStorage.setItem("scores", JSON.stringify(scores));
+    updateLeaderboard();
+}
+
+function updateLeaderboard() {
+    let scores = JSON.parse(localStorage.getItem("scores"));
+    if (scores === null) {
+        return;
+    }
+
+    let div = document.getElementById("leaderboard");
+
+    let leaderboard = "<h3>Your best scores</h3>";
+    const daysWithScore = Object.keys(scores).sort();
+    for (const day of daysWithScore) {
+        leaderboard += `<b>${day}</b>: ${scores[day].best} (${scores[day].tries} attempts)<br>`;
+    }
+
+    div.innerHTML = leaderboard;
+}
 
 // This gets called when the game timer runs out
 function endGame() {
+    saveScore(chess_data.score)
     if (confirm(`Time's up! Final Score: ${chess_data.score}`)) {
 	startNewGame();
     }
@@ -563,6 +607,9 @@ async function loadSettings() {
     chess_data.questionTypes.forEach(questionType => {
         document.querySelector(`input[value="${questionType}"]`).checked = true;
     })
+
+    // Show the current leaderboard (best player results).
+    updateLeaderboard();
 
     console.log(chess_data.questionTypes);
     createDynamicInputs(chess_data.questionTypes);
